@@ -1,0 +1,19 @@
+# 아키텍처
+
+## 패턴
+{{ARCHITECTURE_PATTERN}} (MVVM / TCA / VIPER)
+
+## 레이어 구조
+```mermaid
+graph TD
+  View --> ViewModel
+  ViewModel --> UseCase
+  UseCase --> Repository
+  Repository --> RemoteDataSource
+  Repository --> LocalDataSource
+```
+
+## Swift Package 의존성
+| 패키지 | 용도 | 버전 |
+|--------|------|------|
+| {{PACKAGE_NAME}} | {{PURPOSE}} | {{VERSION}} |

@@ -1,0 +1,15 @@
+# 모듈 구조
+
+## 모듈 목록
+| 모듈명 | 유형 | 역할 | 핵심 클래스 |
+|--------|------|------|------------|
+| {{MODULE_NAME}} | app/feature/core/library | {{MODULE_ROLE}} | {{KEY_CLASS}} |
+
+## 의존성 규칙
+- `app` → `feature:*` → `core:*` → `library:*`
+- 같은 레벨 모듈 간 직접 의존 금지
+
+## 모듈 간 통신
+```mermaid
+{{MERMAID_MODULE_COMM_GRAPH}}
+```

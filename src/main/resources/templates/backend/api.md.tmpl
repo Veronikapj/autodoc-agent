@@ -1,0 +1,22 @@
+# API 문서
+
+## Base URL
+`{{BASE_URL}}`
+
+## 인증
+{{AUTH_METHOD}} (Bearer Token / API Key / OAuth2)
+
+## 엔드포인트
+
+### {{RESOURCE_NAME}}
+| 메서드 | 경로 | 설명 | 인증 필요 |
+|--------|------|------|-----------|
+| {{METHOD}} | {{PATH}} | {{DESC}} | ✅/❌ |
+
+## 에러 코드
+| 코드 | 의미 | 발생 상황 |
+|------|------|-----------|
+| 400 | Bad Request | {{CAUSE}} |
+| 401 | Unauthorized | 인증 토큰 없음/만료 |
+| 404 | Not Found | 리소스 없음 |
+| 500 | Server Error | 서버 내부 오류 |

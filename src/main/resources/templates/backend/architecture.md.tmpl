@@ -1,0 +1,17 @@
+# 아키텍처
+
+## 시스템 구성
+```mermaid
+graph TD
+  Client --> API[API Server\n:{{PORT}}]
+  API --> DB[(Database\n{{DB_NAME}})]
+  API --> Cache[(Redis Cache)]
+```
+
+## 레이어 구조
+Controller → Service → Repository → Database
+
+## 주요 설계 결정
+| 결정 | 이유 | 날짜 |
+|------|------|------|
+| {{DECISION}} | {{REASON}} | {{DATE}} |

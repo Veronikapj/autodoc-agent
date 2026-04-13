@@ -1,0 +1,20 @@
+name: 'AutoDoc Agent'
+description: 'AI agent that automatically updates documentation when PRs are merged'
+author: 'Veronikapj'
+
+inputs:
+  anthropic-api-key:
+    description: 'Anthropic API Key for Claude'
+    required: true
+  confluence-token:
+    description: 'Confluence API Token (only needed if spec.source is confluence)'
+    required: false
+    default: ''
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+
+branding:
+  icon: 'file-text'
+  color: 'blue'

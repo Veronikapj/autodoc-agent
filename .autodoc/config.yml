@@ -1,0 +1,25 @@
+# AutoDoc Agent 설정 파일
+# 이 파일을 타겟 레포의 .autodoc/config.yml에 복사해서 사용하세요
+
+platform: android  # android | ios | backend | frontend | generic
+
+documents:
+  README.md: overwrite
+  architecture.md: overwrite
+  modules.md: overwrite
+  api.md: overwrite
+  setup.md: overwrite
+  testing.md: overwrite
+  CHANGELOG.md: overwrite
+  spec/*.md: append
+
+spec:
+  source: markdown  # markdown | confluence
+  path: docs/spec/
+
+  # Confluence 모드 사용 시 아래 주석 해제
+  # source: confluence
+  # base_url: https://yourcompany.atlassian.net
+  # space_key: ANDROID
+  # page_ids:
+  #   - 123456

@@ -1,0 +1,28 @@
+name: AutoDoc Agent (Self-test)
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  autodoc:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Run AutoDoc Agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TARGET_REPO_PATH: ${{ github.workspace }}
+        run: ./gradlew run --args="${{ github.event.pull_request.number }}"

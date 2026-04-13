@@ -1,0 +1,33 @@
+# 아키텍처
+
+## 레이어 구조
+```mermaid
+graph TD
+  subgraph Presentation
+    UI[UI Layer\nActivity / Fragment / Composable]
+    VM[ViewModel]
+  end
+  subgraph Domain
+    UC[UseCase]
+    REPO_IF[Repository Interface]
+  end
+  subgraph Data
+    REPO[Repository Impl]
+    DS_LOCAL[Local DataSource\nRoom]
+    DS_REMOTE[Remote DataSource\nRetrofit]
+  end
+  UI --> VM --> UC --> REPO_IF
+  REPO --> REPO_IF
+  REPO --> DS_LOCAL
+  REPO --> DS_REMOTE
+```
+
+## 모듈 의존성 그래프
+```mermaid
+{{MERMAID_MODULE_GRAPH}}
+```
+
+## 주요 설계 결정
+| 결정 | 이유 | 날짜 |
+|------|------|------|
+| {{DECISION}} | {{REASON}} | {{DATE}} |
