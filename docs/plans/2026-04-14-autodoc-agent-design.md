@@ -206,11 +206,81 @@ PR 머지 이벤트 (GitHub Actions)
 
 ---
 
+## 플랫폼 설정
+
+autodoc-agent는 플랫폼별로 최적화된 템플릿과 파일 패턴을 사용한다. Android 특화 기능은 옵셔널이며, 플랫폼 설정에 따라 자동으로 적용된다.
+
+### 지원 플랫폼
+
+| 플랫폼 | 특화 에이전트/도구 | 특화 문서 |
+|---|---|---|
+| `android` | Gradle 모듈 분석, Mermaid 모듈 그래프 | architecture.md, modules.md |
+| `ios` | Swift Package 분석 | architecture.md |
+| `backend` | REST/GraphQL 어노테이션 탐색, DB 스키마 분석 | api.md, database.md |
+| `frontend` | 컴포넌트 구조 분석 | components.md, storybook.md |
+| `generic` | 공통 기본값 (플랫폼 미지정 시 폴백) | README.md, CHANGELOG.md |
+
+### 템플릿 우선순위
+
+```
+1순위: 타겟 레포의 .autodoc/templates/{platform}/   ← 팀 커스터마이징
+2순위: autodoc-agent 내장 templates/{platform}/     ← 플랫폼 기본값
+3순위: autodoc-agent 내장 templates/generic/        ← 공통 폴백
+```
+
+### 플랫폼별 파일 패턴 → 에이전트 매핑
+
+```yaml
+patterns:
+  android:
+    - pattern: "**/build.gradle.kts, settings.gradle.kts"
+      agents: [ArchDocAgent, SetupDocAgent]
+    - pattern: "**/*Activity.kt, **/*Fragment.kt, **/di/*.kt"
+      agents: [ArchDocAgent]
+    - pattern: "**/*Api.kt, **/*Service.kt, **/*Endpoint*.kt"
+      agents: [ApiDocAgent]
+    - pattern: "**/*Test.kt, **/*Fake*.kt, **/*Mock*.kt"
+      agents: [TestDocAgent]
+
+  ios:
+    - pattern: "**/*.swift"
+      agents: [ArchDocAgent]
+    - pattern: "**/Package.swift"
+      agents: [SetupDocAgent]
+    - pattern: "**/*Tests.swift"
+      agents: [TestDocAgent]
+
+  backend:
+    - pattern: "**/*Controller.kt, **/*Controller.java"
+      agents: [ApiDocAgent]
+    - pattern: "**/schema/*.sql, **/*.migration"
+      agents: [DatabaseDocAgent]
+    - pattern: "**/*Test.kt, **/*Test.java"
+      agents: [TestDocAgent]
+
+  frontend:
+    - pattern: "**/*.tsx, **/*.vue, **/*.svelte"
+      agents: [ArchDocAgent]
+    - pattern: "**/*.stories.tsx"
+      agents: [StorybookDocAgent]
+    - pattern: "**/*.test.tsx, **/*.spec.ts"
+      agents: [TestDocAgent]
+
+  generic:
+    - pattern: "** (문서 파일 제외 전체)"
+      agents: [ReadmeAgent, ChangelogAgent]
+```
+
+---
+
 ## 문서 모드 설정
 
 문서별로 Overwrite / Append 모드를 `.autodoc/config.yml`로 지정한다.
 
 ```yaml
+# .autodoc/config.yml
+platform: android    # android | ios | backend | frontend | generic
+
 documents:
   README.md:        overwrite   # 항상 최신 상태 유지
   architecture.md:  overwrite
@@ -291,20 +361,39 @@ OrchestratorAgent
 
 ## 템플릿 구조
 
-템플릿은 `.autodoc/templates/`에 내장되며, 사용하는 레포에 같은 경로가 존재하면 그것을 우선 사용한다.
+템플릿은 플랫폼별로 분리되며 우선순위에 따라 로드된다.
 
 ```
 .autodoc/
 ├── config.yml
 └── templates/
-    ├── README.md.tmpl          # 프로젝트 진입점
-    ├── architecture.md.tmpl    # 레이어 구조 + Mermaid 모듈 그래프
-    ├── modules.md.tmpl         # 모듈 역할 표 + 의존성 다이어그램
-    ├── api.md.tmpl             # 엔드포인트 목록 + 요청/응답 예시
-    ├── testing.md.tmpl         # 테스트 시나리오 구조
-    ├── CHANGELOG.md.tmpl       # Keep a Changelog 형식
-    ├── setup.md.tmpl           # 환경 설정 가이드
-    └── spec.md.tmpl            # 기획서 + 변경 이력
+    ├── generic/                    # 모든 플랫폼 공통 기본값
+    │   ├── README.md.tmpl
+    │   ├── CHANGELOG.md.tmpl
+    │   ├── setup.md.tmpl
+    │   └── spec.md.tmpl
+    │
+    ├── android/                    # Android 특화
+    │   ├── README.md.tmpl          # minSdk, targetSdk, 스크린샷 섹션
+    │   ├── architecture.md.tmpl    # Mermaid 모듈 그래프, MVVM/MVI 레이어
+    │   ├── modules.md.tmpl         # Gradle 모듈 의존성 표
+    │   └── testing.md.tmpl         # Instrumented / Unit test 시나리오
+    │
+    ├── ios/                        # iOS 특화
+    │   ├── README.md.tmpl          # Swift Package, Xcode 버전
+    │   ├── architecture.md.tmpl    # MVVM, Clean Architecture
+    │   └── testing.md.tmpl         # XCTest 시나리오
+    │
+    ├── backend/                    # 백엔드 특화
+    │   ├── README.md.tmpl
+    │   ├── api.md.tmpl             # REST/GraphQL 엔드포인트
+    │   ├── architecture.md.tmpl    # 서버 컴포넌트 다이어그램
+    │   └── database.md.tmpl        # 스키마, ERD
+    │
+    └── frontend/                   # 프론트엔드 특화
+        ├── README.md.tmpl
+        ├── components.md.tmpl      # 컴포넌트 구조
+        └── storybook.md.tmpl       # 컴포넌트 문서
 ```
 
 > 다이어그램은 Mermaid로 통일 — GitHub 네이티브 렌더링 지원, 텍스트 기반이라 에이전트가 직접 생성/수정 가능
@@ -315,17 +404,34 @@ OrchestratorAgent
 
 ```
 autodoc-agent/
+├── action.yml                        # GitHub Marketplace 등록 진입점
+├── Dockerfile                        # Kotlin 앱 Docker 패키징
 ├── .autodoc/
 │   ├── config.yml
 │   └── templates/
-│       ├── README.md.tmpl
-│       ├── architecture.md.tmpl
-│       ├── modules.md.tmpl
-│       ├── api.md.tmpl
-│       ├── testing.md.tmpl
-│       ├── CHANGELOG.md.tmpl
-│       ├── setup.md.tmpl
-│       └── spec.md.tmpl
+│       ├── generic/
+│       │   ├── README.md.tmpl
+│       │   ├── CHANGELOG.md.tmpl
+│       │   ├── setup.md.tmpl
+│       │   └── spec.md.tmpl
+│       ├── android/
+│       │   ├── README.md.tmpl
+│       │   ├── architecture.md.tmpl
+│       │   ├── modules.md.tmpl
+│       │   └── testing.md.tmpl
+│       ├── ios/
+│       │   ├── README.md.tmpl
+│       │   ├── architecture.md.tmpl
+│       │   └── testing.md.tmpl
+│       ├── backend/
+│       │   ├── README.md.tmpl
+│       │   ├── api.md.tmpl
+│       │   ├── architecture.md.tmpl
+│       │   └── database.md.tmpl
+│       └── frontend/
+│           ├── README.md.tmpl
+│           ├── components.md.tmpl
+│           └── storybook.md.tmpl
 ├── src/main/kotlin/.../
 │   ├── agent/
 │   │   ├── OrchestratorAgent.kt
@@ -337,6 +443,9 @@ autodoc-agent/
 │   │   ├── SetupDocAgent.kt
 │   │   └── SpecDocAgent.kt
 │   ├── a2a/                          # koog-practice에서 재사용
+│   ├── platform/
+│   │   ├── PlatformConfig.kt         # 플랫폼별 패턴/에이전트 매핑
+│   │   └── TemplateResolver.kt       # 템플릿 우선순위 로드
 │   ├── tools/
 │   │   ├── GitHubTool.kt             # PR diff, 브랜치, PR 생성
 │   │   ├── ConfluenceTool.kt         # Confluence API 연동
@@ -346,7 +455,8 @@ autodoc-agent/
 │   └── Main.kt
 └── .github/
     └── workflows/
-        └── autodoc.yml               # PR 머지 시 자동 실행
+        ├── autodoc.yml               # PR 머지 시 자동 실행 (자체 테스트용)
+        └── publish.yml               # 태그 시 Marketplace 배포
 ```
 
 ---
@@ -360,6 +470,8 @@ autodoc-agent/
 | 통신 방식 | A2A HTTP | koog-practice 구조 재사용 |
 | 다이어그램 | Mermaid | GitHub 네이티브, 텍스트 기반 |
 | 문서 모드 | Overwrite / Append (문서별 설정) | 현황 문서 vs 이력 추적 문서 분리 |
-| 템플릿 위치 | `.autodoc/templates/` | 레포별 커스터마이징 가능 |
+| 플랫폼 지원 | generic / android / ios / backend / frontend | Android 특화는 옵셔널, 플랫폼별 확장 가능 |
+| 템플릿 위치 | `.autodoc/templates/{platform}/` | 플랫폼별 분리 + 레포 커스터마이징 가능 |
 | 기획서 소스 | Markdown / Confluence (설정 기반) | 사이드 프로젝트 / 회사 레포 대응 |
+| 배포 방식 | Docker + GitHub Marketplace Action | 외부 레포에서 `uses: Veronikapj/autodoc-agent@v1`로 사용 |
 | 출력 | 문서 업데이트 PR | 사람이 최종 검토 후 머지 |
