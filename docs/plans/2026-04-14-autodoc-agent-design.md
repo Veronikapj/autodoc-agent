@@ -363,40 +363,423 @@ OrchestratorAgent
 
 템플릿은 플랫폼별로 분리되며 우선순위에 따라 로드된다.
 
-```
-.autodoc/
-├── config.yml
-└── templates/
-    ├── generic/                    # 모든 플랫폼 공통 기본값
-    │   ├── README.md.tmpl
-    │   ├── CHANGELOG.md.tmpl
-    │   ├── setup.md.tmpl
-    │   └── spec.md.tmpl
-    │
-    ├── android/                    # Android 특화
-    │   ├── README.md.tmpl          # minSdk, targetSdk, 스크린샷 섹션
-    │   ├── architecture.md.tmpl    # Mermaid 모듈 그래프, MVVM/MVI 레이어
-    │   ├── modules.md.tmpl         # Gradle 모듈 의존성 표
-    │   └── testing.md.tmpl         # Instrumented / Unit test 시나리오
-    │
-    ├── ios/                        # iOS 특화
-    │   ├── README.md.tmpl          # Swift Package, Xcode 버전
-    │   ├── architecture.md.tmpl    # MVVM, Clean Architecture
-    │   └── testing.md.tmpl         # XCTest 시나리오
-    │
-    ├── backend/                    # 백엔드 특화
-    │   ├── README.md.tmpl
-    │   ├── api.md.tmpl             # REST/GraphQL 엔드포인트
-    │   ├── architecture.md.tmpl    # 서버 컴포넌트 다이어그램
-    │   └── database.md.tmpl        # 스키마, ERD
-    │
-    └── frontend/                   # 프론트엔드 특화
-        ├── README.md.tmpl
-        ├── components.md.tmpl      # 컴포넌트 구조
-        └── storybook.md.tmpl       # 컴포넌트 문서
+> 다이어그램은 Mermaid로 통일 — GitHub 네이티브 렌더링 지원, 텍스트 기반이라 에이전트가 직접 생성/수정 가능
+
+---
+
+### generic/README.md.tmpl
+```markdown
+# {{PROJECT_NAME}}
+
+{{PROJECT_DESCRIPTION}}
+
+## Overview
+{{OVERVIEW}}
+
+## Getting Started
+→ [setup.md](docs/setup.md) 참고
+
+## Contributing
+- 브랜치 전략: `feature/`, `fix/`, `docs/`
+- PR 머지 전 리뷰 최소 1명 승인 필요
+- 커밋 컨벤션: `feat:` `fix:` `docs:` `chore:`
 ```
 
-> 다이어그램은 Mermaid로 통일 — GitHub 네이티브 렌더링 지원, 텍스트 기반이라 에이전트가 직접 생성/수정 가능
+### generic/CHANGELOG.md.tmpl
+```markdown
+# Changelog
+Keep a Changelog 형식을 따릅니다.
+
+## [Unreleased]
+
+### Added
+
+### Fixed
+
+### Changed
+```
+
+### generic/setup.md.tmpl
+```markdown
+# 개발 환경 설정
+
+## 요구사항
+| 항목 | 버전 |
+|------|------|
+| {{RUNTIME_NAME}} | {{RUNTIME_VERSION}} |
+
+## 환경변수
+| 변수명 | 설명 | 필수 |
+|--------|------|------|
+| {{ENV_VAR_NAME}} | {{ENV_VAR_DESC}} | ✅ |
+
+## 실행 방법
+\`\`\`bash
+{{RUN_COMMAND}}
+\`\`\`
+```
+
+### generic/spec.md.tmpl
+```markdown
+# {{FEATURE_NAME}} 기획서
+
+## 현재 스펙
+{{SPEC_CONTENT}}
+
+## 변경 이력
+### {{DATE}} | PR #{{PR_NUMBER}}
+- {{CHANGE_DESCRIPTION}}
+```
+
+---
+
+### android/README.md.tmpl
+```markdown
+# {{APP_NAME}}
+
+![Build Status](https://github.com/{{REPO}}/actions/workflows/build.yml/badge.svg)
+[![API](https://img.shields.io/badge/API-{{MIN_SDK}}%2B-brightgreen.svg)](https://android-arsenal.com/api?level={{MIN_SDK}})
+
+{{APP_DESCRIPTION}}
+
+## 스크린샷
+| 홈 | 상세 | 설정 |
+|---|---|---|
+| TODO | TODO | TODO |
+
+## 아키텍처
+→ [architecture.md](docs/architecture.md) 참고
+
+\`\`\`mermaid
+graph TD
+  {{MERMAID_LAYER_GRAPH}}
+\`\`\`
+
+## 기술 스택
+| 분류 | 라이브러리 |
+|------|-----------|
+| UI | {{UI_LIBRARIES}} |
+| DI | {{DI_LIBRARY}} |
+| Network | {{NETWORK_LIBRARY}} |
+| DB | {{DB_LIBRARY}} |
+
+## 요구사항
+- Android {{MIN_SDK}}+ ({{MIN_SDK_NAME}})
+- compileSdk {{COMPILE_SDK}}
+```
+
+### android/architecture.md.tmpl
+```markdown
+# 아키텍처
+
+## 레이어 구조
+\`\`\`mermaid
+graph TD
+  subgraph Presentation
+    UI[UI Layer\nActivity / Fragment / Composable]
+    VM[ViewModel]
+  end
+  subgraph Domain
+    UC[UseCase]
+    REPO_IF[Repository Interface]
+  end
+  subgraph Data
+    REPO[Repository Impl]
+    DS_LOCAL[Local DataSource\nRoom]
+    DS_REMOTE[Remote DataSource\nRetrofit]
+  end
+  UI --> VM --> UC --> REPO_IF
+  REPO --> REPO_IF
+  REPO --> DS_LOCAL
+  REPO --> DS_REMOTE
+\`\`\`
+
+## 모듈 의존성 그래프
+\`\`\`mermaid
+{{MERMAID_MODULE_GRAPH}}
+\`\`\`
+
+## 주요 설계 결정
+| 결정 | 이유 | 날짜 |
+|------|------|------|
+| {{DECISION}} | {{REASON}} | {{DATE}} |
+```
+
+### android/modules.md.tmpl
+```markdown
+# 모듈 구조
+
+## 모듈 목록
+| 모듈명 | 유형 | 역할 | 핵심 클래스 |
+|--------|------|------|------------|
+| {{MODULE_NAME}} | app/feature/core/library | {{MODULE_ROLE}} | {{KEY_CLASS}} |
+
+## 의존성 규칙
+- `app` → `feature:*` → `core:*` → `library:*`
+- 같은 레벨 모듈 간 직접 의존 금지
+
+## 모듈 간 통신
+\`\`\`mermaid
+{{MERMAID_MODULE_COMM_GRAPH}}
+\`\`\`
+```
+
+### android/testing.md.tmpl
+```markdown
+# 테스트 시나리오
+
+## {{FEATURE_NAME}}
+
+### 단위 테스트 (Unit Test)
+| 시나리오 | Given | When | Then | 상태 |
+|----------|-------|------|------|------|
+| {{SCENARIO}} | {{GIVEN}} | {{WHEN}} | {{THEN}} | ✅/❌ |
+
+### UI 테스트 (Instrumented Test)
+| 시나리오 | 사전 조건 | 액션 | 기대 결과 | 상태 |
+|----------|-----------|------|-----------|------|
+| {{SCENARIO}} | {{PRECONDITION}} | {{ACTION}} | {{EXPECTED}} | ✅/❌ |
+
+## 미검증 시나리오
+- {{UNVERIFIED_SCENARIO}}
+
+## 테스트 환경
+| 항목 | 라이브러리 |
+|------|-----------|
+| Unit | JUnit5, MockK, Turbine |
+| UI | Espresso / Compose Test |
+```
+
+---
+
+### ios/README.md.tmpl
+```markdown
+# {{APP_NAME}}
+
+![Xcode](https://img.shields.io/badge/Xcode-{{XCODE_VERSION}}-blue)
+![Swift](https://img.shields.io/badge/Swift-{{SWIFT_VERSION}}-orange)
+![iOS](https://img.shields.io/badge/iOS-{{MIN_IOS}}%2B-lightgrey)
+
+{{APP_DESCRIPTION}}
+
+## 요구사항
+- Xcode {{XCODE_VERSION}}+
+- Swift {{SWIFT_VERSION}}
+- iOS {{MIN_IOS}}+
+
+## 기술 스택
+| 분류 | 라이브러리 |
+|------|-----------|
+| UI | {{UI_FRAMEWORK}} |
+| 의존성 관리 | {{PACKAGE_MANAGER}} |
+| 네트워크 | {{NETWORK_LIBRARY}} |
+```
+
+### ios/architecture.md.tmpl
+```markdown
+# 아키텍처
+
+## 패턴
+{{ARCHITECTURE_PATTERN}} (MVVM / TCA / VIPER)
+
+## 레이어 구조
+\`\`\`mermaid
+graph TD
+  View --> ViewModel
+  ViewModel --> UseCase
+  UseCase --> Repository
+  Repository --> RemoteDataSource
+  Repository --> LocalDataSource
+\`\`\`
+
+## Swift Package 의존성
+| 패키지 | 용도 | 버전 |
+|--------|------|------|
+| {{PACKAGE_NAME}} | {{PURPOSE}} | {{VERSION}} |
+```
+
+### ios/testing.md.tmpl
+```markdown
+# 테스트 시나리오
+
+## {{FEATURE_NAME}}
+
+### 단위 테스트 (XCTest)
+| 시나리오 | Given | When | Then | 상태 |
+|----------|-------|------|------|------|
+| {{SCENARIO}} | {{GIVEN}} | {{WHEN}} | {{THEN}} | ✅/❌ |
+
+### UI 테스트 (XCUITest)
+| 시나리오 | 사전 조건 | 액션 | 기대 결과 | 상태 |
+|----------|-----------|------|-----------|------|
+| {{SCENARIO}} | {{PRECONDITION}} | {{ACTION}} | {{EXPECTED}} | ✅/❌ |
+
+## 미검증 시나리오
+- {{UNVERIFIED_SCENARIO}}
+```
+
+---
+
+### backend/README.md.tmpl
+```markdown
+# {{SERVICE_NAME}}
+
+{{SERVICE_DESCRIPTION}}
+
+## 요구사항
+- JDK {{JAVA_VERSION}} / Node {{NODE_VERSION}}
+- Docker {{DOCKER_VERSION}}
+
+## 실행
+\`\`\`bash
+{{RUN_COMMAND}}
+\`\`\`
+
+## API 문서
+→ [api.md](docs/api.md) 참고
+→ Swagger: `http://localhost:{{PORT}}/swagger-ui`
+```
+
+### backend/api.md.tmpl
+```markdown
+# API 문서
+
+## Base URL
+`{{BASE_URL}}`
+
+## 인증
+{{AUTH_METHOD}} (Bearer Token / API Key / OAuth2)
+
+## 엔드포인트
+
+### {{RESOURCE_NAME}}
+| 메서드 | 경로 | 설명 | 인증 필요 |
+|--------|------|------|-----------|
+| {{METHOD}} | {{PATH}} | {{DESC}} | ✅/❌ |
+
+#### 요청
+\`\`\`json
+{{REQUEST_EXAMPLE}}
+\`\`\`
+
+#### 응답
+\`\`\`json
+{{RESPONSE_EXAMPLE}}
+\`\`\`
+
+## 에러 코드
+| 코드 | 의미 | 발생 상황 |
+|------|------|-----------|
+| 400 | Bad Request | {{CAUSE}} |
+| 401 | Unauthorized | 인증 토큰 없음/만료 |
+| 404 | Not Found | 리소스 없음 |
+| 500 | Server Error | 서버 내부 오류 |
+```
+
+### backend/architecture.md.tmpl
+```markdown
+# 아키텍처
+
+## 시스템 구성
+\`\`\`mermaid
+graph TD
+  Client --> API[API Server\n:{{PORT}}]
+  API --> DB[(Database\n{{DB_NAME}})]
+  API --> Cache[(Redis Cache)]
+  API --> MQ[Message Queue]
+\`\`\`
+
+## 레이어 구조
+Controller → Service → Repository → Database
+
+## 주요 설계 결정
+| 결정 | 이유 | 날짜 |
+|------|------|------|
+| {{DECISION}} | {{REASON}} | {{DATE}} |
+```
+
+### backend/database.md.tmpl
+```markdown
+# 데이터베이스
+
+## ERD
+\`\`\`mermaid
+erDiagram
+  {{ERD_CONTENT}}
+\`\`\`
+
+## 테이블 목록
+| 테이블명 | 설명 | 주요 컬럼 |
+|----------|------|-----------|
+| {{TABLE_NAME}} | {{DESC}} | {{COLUMNS}} |
+
+## 마이그레이션 이력
+| 버전 | 변경 내용 | 날짜 |
+|------|-----------|------|
+| {{VERSION}} | {{CHANGE}} | {{DATE}} |
+```
+
+---
+
+### frontend/README.md.tmpl
+```markdown
+# {{PROJECT_NAME}}
+
+{{PROJECT_DESCRIPTION}}
+
+## 요구사항
+- Node {{NODE_VERSION}}
+- {{PACKAGE_MANAGER}} {{PM_VERSION}}
+
+## 실행
+\`\`\`bash
+{{INSTALL_COMMAND}}
+{{DEV_COMMAND}}
+\`\`\`
+
+## 기술 스택
+| 분류 | 라이브러리 |
+|------|-----------|
+| Framework | {{FRAMEWORK}} |
+| 상태관리 | {{STATE_LIBRARY}} |
+| 스타일 | {{STYLE_LIBRARY}} |
+```
+
+### frontend/components.md.tmpl
+```markdown
+# 컴포넌트 구조
+
+## 컴포넌트 계층
+\`\`\`mermaid
+graph TD
+  {{COMPONENT_HIERARCHY}}
+\`\`\`
+
+## 컴포넌트 목록
+| 컴포넌트 | 경로 | 역할 | Props |
+|----------|------|------|-------|
+| {{COMPONENT_NAME}} | {{PATH}} | {{ROLE}} | {{PROPS}} |
+```
+
+### frontend/storybook.md.tmpl
+```markdown
+# 컴포넌트 문서
+
+## {{COMPONENT_NAME}}
+
+### 설명
+{{DESCRIPTION}}
+
+### Props
+| Prop | 타입 | 기본값 | 필수 | 설명 |
+|------|------|--------|------|------|
+| {{PROP_NAME}} | {{TYPE}} | {{DEFAULT}} | ✅/❌ | {{DESC}} |
+
+### 사용 예시
+\`\`\`tsx
+{{USAGE_EXAMPLE}}
+\`\`\`
+```
 
 ---
 
