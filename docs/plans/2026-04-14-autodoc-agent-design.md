@@ -23,6 +23,10 @@ PR 머지 이벤트 (GitHub Actions)
   │  ReadmeAgent                     │
   │  ArchDocAgent                    │
   │  ApiDocAgent                     │
+  │  TestDocAgent                    │
+  │  ChangelogAgent                  │
+  │  SetupDocAgent                   │
+  │  SpecDocAgent                    │
   └──────────────────────────────────┘
         ↓
   각 에이전트가 문서 초안 작성
@@ -40,29 +44,196 @@ PR 머지 이벤트 (GitHub Actions)
 - **도구**:
   - `fetchPRDiff(prNumber)` — 변경 파일 목록과 diff 가져오기
   - `listExistingDocs(repoPath)` — docs/ 폴더 구조 탐색
-- **판단 로직**:
-  - `*.kt` 파일 변경 + 모듈 추가/삭제 → ArchDocAgent 호출
-  - `*Controller`, `*Router`, `*Api` 변경 → ApiDocAgent 호출
-  - 진입점(`Application`, `MainActivity`) 변경 → ReadmeAgent 호출
-  - 문서가 없으면 해당 에이전트에 "신규 생성" 플래그 전달
+- **판단 로직 — 파일 변경 → 에이전트 매핑**:
+
+  | 변경된 파일 패턴 | 호출 에이전트 | 액션 |
+  |---|---|---|
+  | `**/build.gradle.kts`, `settings.gradle.kts` | ArchDocAgent, SetupDocAgent | 모듈/의존성/SDK 변경 반영 |
+  | `**/*Module*.kt`, `**/di/*.kt` | ArchDocAgent | DI 구조 변경 반영 |
+  | `**/*Activity.kt`, `**/*Fragment.kt` | ArchDocAgent | 화면 흐름 변경 반영 |
+  | `**/*Api.kt`, `**/*Service.kt`, `**/*Endpoint*.kt` | ApiDocAgent | 엔드포인트 추가/변경 반영 |
+  | `**/*Repository.kt` | ApiDocAgent, ArchDocAgent | 데이터 레이어 변경 |
+  | `**/Application.kt`, `**/MainActivity.kt` | ReadmeAgent | 앱 진입점 변경 |
+  | `**/*Test.kt`, `**/*Fake*.kt`, `**/*Mock*.kt` | TestDocAgent | 테스트 시나리오 변경 반영 |
+  | `docs/spec/*.md` | SpecDocAgent | 기획서 변경 (레포 모드) |
+  | PR 라벨: `feat:`, `fix:`, `refactor:` | ChangelogAgent | 변경 이력 추가 |
+
+- **스킵 조건**:
+  - `*.png`, `*.xml` (strings.xml 제외) — 리소스 파일
+  - `docs/**`, `*.md` — 문서 파일 자체 변경 (순환 방지)
+  - `.github/**`, `*.yml` — CI/CD 설정
+  - PR 라벨: `docs:`, `chore:` — ChangelogAgent 스킵
+
+- **행동 규칙**:
+  1. diff 전체를 먼저 분류한 후 에이전트를 선별한다
+  2. 관련 없는 에이전트는 절대 호출하지 않는다 (비용/시간 최소화)
+  3. 에이전트 호출 전 "이 PR이 어떤 문서에 영향을 주는지" 한 줄 요약을 생성한다
+  4. 모든 에이전트 결과를 받은 후 PR 본문에 변경 이유를 요약해서 포함한다
+
+---
 
 ### ReadmeAgent
 - **역할**: `README.md` 생성 또는 업데이트
+- **모드**: Overwrite
 - **도구**: `readFile`, `listFiles`, `loadTemplate("README.md.tmpl")`
 - **입력**: PR diff + 기존 README (없으면 템플릿)
 - **출력**: 업데이트된 `README.md`
+- **행동 규칙**:
+  1. 기존 README가 있으면 반드시 전체를 읽고 시작한다
+  2. 기존 내용의 톤/스타일을 유지한다 (임의로 구조를 바꾸지 않는다)
+  3. PR diff에서 변경된 것만 반영한다 (관련 없는 섹션은 건드리지 않는다)
+  4. 신규 생성 시 템플릿 기반으로 실제 값을 코드에서 추출해 채운다
+     - 앱 이름: `AndroidManifest.xml`에서 추출
+     - 최소 SDK: `build.gradle.kts`에서 추출
+     - 주요 라이브러리: `dependencies` 블록에서 추출
+  5. 확인할 수 없는 내용은 추측하지 않고 `TODO`로 표시한다
+
+---
 
 ### ArchDocAgent
 - **역할**: `architecture.md` + `modules.md` 생성 또는 업데이트
+- **모드**: Overwrite
 - **도구**: `readFile`, `listFiles`, `codeSearch`, `generateMermaidGraph`
 - **입력**: `build.gradle` 변경 + 모듈 구조
-- **출력**: Mermaid 다이어그램이 포함된 `architecture.md`
+- **출력**: Mermaid 다이어그램이 포함된 `architecture.md`, `modules.md`
+- **행동 규칙**:
+  1. `build.gradle.kts`와 `settings.gradle.kts`를 반드시 읽고 모듈 목록을 파악한다
+  2. Mermaid 그래프는 실제 의존성 기반으로만 생성한다 (추측 금지)
+  3. 모듈 표에는 실제 존재하는 클래스만 기재한다
+  4. 기존 다이어그램이 있으면 추가/삭제된 모듈만 수정한다 (전체 재작성 금지)
+  5. ADR이 필요한 변경(레이어 구조 변경, 새 아키텍처 패턴 도입)은 직접 쓰지 않고 PR 본문에 사람에게 알린다
+
+---
 
 ### ApiDocAgent
 - **역할**: `api.md` 생성 또는 업데이트
-- **도구**: `readFile`, `codeSearch` (`@GET`, `@POST`, `@Api` 등 어노테이션 탐색)
+- **모드**: Overwrite
+- **도구**: `readFile`, `codeSearch`
 - **입력**: API 관련 파일 diff
 - **출력**: 엔드포인트 추가/수정된 `api.md`
+- **행동 규칙**:
+  1. `@GET`, `@POST`, `@PUT`, `@DELETE`, `@PATCH` 어노테이션을 `codeSearch`로 전부 찾는다
+  2. 요청/응답 모델은 실제 `data class`를 읽어서 필드를 파악한다
+  3. 기존 문서에 있는 엔드포인트는 건드리지 않는다 (변경된 것만 업데이트)
+  4. 삭제된 엔드포인트는 제거하지 않고 `[DEPRECATED]` 표시를 한다
+  5. 인증 방식, 에러 코드는 기존 패턴을 참고해서 일관성을 유지한다
+
+---
+
+### TestDocAgent
+- **역할**: 테스트 시나리오 문서 생성 또는 업데이트
+- **모드**: Overwrite
+- **도구**: `readFile`, `listFiles`, `codeSearch`
+- **입력**: `**/*Test.kt` 변경 diff
+- **출력**: `docs/testing.md` (테스트 시나리오 중심)
+- **행동 규칙**:
+  1. `@Test` 함수명과 내용을 분석해서 "무엇을 검증하는지" 자연어로 정리한다
+  2. `given / when / then` 구조로 시나리오를 서술한다
+  3. 기능별로 테스트 시나리오를 그룹핑한다
+     - 예) 로그인 기능: 성공 케이스, 실패 케이스, 엣지 케이스
+  4. 테스트가 없는 기능은 "미검증 시나리오"로 별도 표시한다
+  5. 커버리지 수치보다 "어떤 상황을 테스트하는가"에 집중한다
+  6. 신규 테스트 추가 시 해당 시나리오만 문서에 추가한다 (전체 재작성 금지)
+  7. Mockk, Turbine, Robolectric 등 사용 중인 라이브러리를 탐지해서 반영한다
+
+---
+
+### ChangelogAgent
+- **역할**: `CHANGELOG.md` 자동 업데이트
+- **모드**: Overwrite
+- **도구**: `fetchPRInfo(prNumber)`, `readFile`, `loadTemplate`
+- **입력**: PR 제목, 라벨, 본문
+- **출력**: `CHANGELOG.md`에 항목 추가
+- **행동 규칙**:
+  1. PR 제목의 prefix를 기준으로 분류한다
+     - `feat:` → `### Added`
+     - `fix:` → `### Fixed`
+     - `refactor:` → `### Changed`
+     - `docs:`, `chore:` → 스킵
+  2. 현재 버전이 없으면 `## [Unreleased]` 섹션에 추가한다
+  3. PR 제목을 그대로 쓰지 않고 사용자 관점으로 다듬어 쓴다
+     - 예) `"feat: add UserRepository"` → `"사용자 데이터 로컬 캐싱 추가"`
+  4. Keep a Changelog 형식을 유지한다
+
+---
+
+### SetupDocAgent
+- **역할**: `docs/setup.md` 생성 또는 업데이트
+- **모드**: Overwrite
+- **도구**: `readFile`, `codeSearch`
+- **입력**: `build.gradle.kts` 변경
+- **출력**: `docs/setup.md` (SDK, 환경변수, 실행 방법)
+- **행동 규칙**:
+  1. `compileSdk`, `minSdk`, `targetSdk`를 `build.gradle.kts`에서 추출한다
+  2. `local.properties.example`이 있으면 반드시 읽어서 환경변수 목록을 파악한다
+  3. 실행 방법은 `gradlew` 명령어 기반으로 작성한다
+  4. JDK 버전은 `toolchain` 설정에서 추출한다
+  5. 설정 방법이 불명확한 항목은 `TODO`로 표시하고 PR 본문에 알린다
+
+---
+
+### SpecDocAgent
+- **역할**: 기획서 변경을 감지하고 문서에 반영
+- **모드**: Append (변경 이력 누적)
+- **두 가지 소스 모드** (`.autodoc/config.yml`로 설정):
+
+  **레포 모드** (`source: markdown`)
+  - `docs/spec/*.md` 변경 감지
+  - 변경된 기획 내용을 읽고 관련 문서 업데이트
+  - 트리거: 기획서 파일이 PR에 포함된 경우
+
+  **Confluence 모드** (`source: confluence`)
+  - Confluence API로 특정 페이지 변경 여부 확인
+  - 변경된 페이지 내용을 `docs/spec/`에 마크다운으로 동기화
+  - 트리거: PR 머지 시 + 스케줄 (매일 1회)
+
+- **도구**: `readFile`, `listFiles`, `fetchConfluencePage(pageId)`, `diffSpecContent()`
+- **출력 형식 (Append 모드)**:
+
+  ```markdown
+  ## 현재 스펙
+  ...최신 내용...
+
+  ## 변경 이력
+  ### 2026-04-14 | PR #42
+  - 소셜 로그인 카카오 추가
+  - 자동 로그인 만료 기간 30일 → 7일로 변경
+  - 이유: 보안 정책 강화
+
+  ### 2026-03-20 | PR #31
+  - 이메일 로그인 추가
+  ```
+
+---
+
+## 문서 모드 설정
+
+문서별로 Overwrite / Append 모드를 `.autodoc/config.yml`로 지정한다.
+
+```yaml
+documents:
+  README.md:        overwrite   # 항상 최신 상태 유지
+  architecture.md:  overwrite
+  modules.md:       overwrite
+  api.md:           overwrite
+  setup.md:         overwrite
+  testing.md:       overwrite
+  CHANGELOG.md:     overwrite   # Keep a Changelog 형식으로 누적
+  spec/*.md:        append      # 기획서는 변경 이력 추적
+
+spec:
+  # 사이드 프로젝트
+  source: markdown
+  path: docs/spec/
+
+  # 회사 레포 (Confluence)
+  # source: confluence
+  # base_url: https://yourcompany.atlassian.net
+  # space_key: ANDROID
+  # page_ids:
+  #   - 123456
+  #   - 789012
+```
 
 ---
 
@@ -124,36 +295,17 @@ OrchestratorAgent
 
 ```
 .autodoc/
+├── config.yml
 └── templates/
     ├── README.md.tmpl          # 프로젝트 진입점
     ├── architecture.md.tmpl    # 레이어 구조 + Mermaid 모듈 그래프
     ├── modules.md.tmpl         # 모듈 역할 표 + 의존성 다이어그램
-    └── api.md.tmpl             # 엔드포인트 목록 + 요청/응답 예시
+    ├── api.md.tmpl             # 엔드포인트 목록 + 요청/응답 예시
+    ├── testing.md.tmpl         # 테스트 시나리오 구조
+    ├── CHANGELOG.md.tmpl       # Keep a Changelog 형식
+    ├── setup.md.tmpl           # 환경 설정 가이드
+    └── spec.md.tmpl            # 기획서 + 변경 이력
 ```
-
-### README.md 템플릿 구성
-- 배지 (빌드 상태, 커버리지)
-- Overview
-- Screenshots
-- Architecture (Mermaid 레이어 다이어그램)
-- Tech Stack
-- Getting Started
-- Contributing
-
-### architecture.md 템플릿 구성
-- Module Graph (Mermaid)
-- Layer Structure (UI / Domain / Data)
-- Key Design Decisions (ADR)
-- Data Flow (시퀀스 다이어그램)
-
-### modules.md 템플릿 구성
-- 모듈명 / 역할 / 핵심 클래스 / 의존 모듈 표
-- 모듈 간 통신 다이어그램 (Mermaid)
-
-### api.md 템플릿 구성
-- Endpoints 목록
-- Request / Response 예시
-- Error Codes
 
 > 다이어그램은 Mermaid로 통일 — GitHub 네이티브 렌더링 지원, 텍스트 기반이라 에이전트가 직접 생성/수정 가능
 
@@ -164,27 +316,37 @@ OrchestratorAgent
 ```
 autodoc-agent/
 ├── .autodoc/
+│   ├── config.yml
 │   └── templates/
 │       ├── README.md.tmpl
 │       ├── architecture.md.tmpl
 │       ├── modules.md.tmpl
-│       └── api.md.tmpl
+│       ├── api.md.tmpl
+│       ├── testing.md.tmpl
+│       ├── CHANGELOG.md.tmpl
+│       ├── setup.md.tmpl
+│       └── spec.md.tmpl
 ├── src/main/kotlin/.../
 │   ├── agent/
 │   │   ├── OrchestratorAgent.kt
 │   │   ├── ReadmeAgent.kt
 │   │   ├── ArchDocAgent.kt
-│   │   └── ApiDocAgent.kt
-│   ├── a2a/                        # koog-practice에서 재사용
+│   │   ├── ApiDocAgent.kt
+│   │   ├── TestDocAgent.kt
+│   │   ├── ChangelogAgent.kt
+│   │   ├── SetupDocAgent.kt
+│   │   └── SpecDocAgent.kt
+│   ├── a2a/                          # koog-practice에서 재사용
 │   ├── tools/
-│   │   ├── GitHubTool.kt           # PR diff, 브랜치, PR 생성
+│   │   ├── GitHubTool.kt             # PR diff, 브랜치, PR 생성
+│   │   ├── ConfluenceTool.kt         # Confluence API 연동
 │   │   ├── ReadFileTool.kt
 │   │   ├── ListFileTool.kt
-│   │   └── MermaidTool.kt          # 모듈 의존성 → Mermaid 다이어그램
+│   │   └── MermaidTool.kt            # 모듈 의존성 → Mermaid 다이어그램
 │   └── Main.kt
 └── .github/
     └── workflows/
-        └── autodoc.yml             # PR 머지 시 자동 실행
+        └── autodoc.yml               # PR 머지 시 자동 실행
 ```
 
 ---
@@ -194,8 +356,10 @@ autodoc-agent/
 | 항목 | 결정 | 이유 |
 |------|------|------|
 | 트리거 | GitHub Actions (PR 머지) | 별도 서버 불필요, 레포에 내장 |
-| 에이전트 수 | 4개 (Orchestrator + 3 전문가) | 역할 분리로 품질 향상 |
+| 에이전트 수 | 8개 (Orchestrator + 7 전문가) | 역할 분리로 품질 향상 |
 | 통신 방식 | A2A HTTP | koog-practice 구조 재사용 |
 | 다이어그램 | Mermaid | GitHub 네이티브, 텍스트 기반 |
+| 문서 모드 | Overwrite / Append (문서별 설정) | 현황 문서 vs 이력 추적 문서 분리 |
 | 템플릿 위치 | `.autodoc/templates/` | 레포별 커스터마이징 가능 |
+| 기획서 소스 | Markdown / Confluence (설정 기반) | 사이드 프로젝트 / 회사 레포 대응 |
 | 출력 | 문서 업데이트 PR | 사람이 최종 검토 후 머지 |
