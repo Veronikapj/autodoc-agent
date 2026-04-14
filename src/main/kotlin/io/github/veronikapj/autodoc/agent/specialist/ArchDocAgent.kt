@@ -1,15 +1,6 @@
-@file:OptIn(ExperimentalAgentsApi::class)
-
 package io.github.veronikapj.autodoc.agent.specialist
 
-import ai.koog.agents.core.agent.AIAgent
-import ai.koog.agents.core.agent.config.AIAgentConfig
-import ai.koog.agents.core.annotation.ExperimentalAgentsApi
 import ai.koog.agents.core.tools.ToolRegistry
-import ai.koog.agents.features.eventHandler.feature.EventHandler
-import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
-import ai.koog.prompt.executor.clients.anthropic.AnthropicParams
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import io.github.veronikapj.autodoc.platform.TemplateResolver
 import io.github.veronikapj.autodoc.tools.codeSearchTool
@@ -17,49 +8,20 @@ import io.github.veronikapj.autodoc.tools.listFiles
 import io.github.veronikapj.autodoc.tools.readFile
 
 class ArchDocAgent(
-    private val executor: MultiLLMPromptExecutor,
-    private val templateResolver: TemplateResolver,
-) : SpecialistDocAgent {
+    executor: MultiLLMPromptExecutor,
+    templateResolver: TemplateResolver,
+) : BaseDocAgent(executor, templateResolver) {
 
-    private val registry = ToolRegistry {
+    override val tag = "arch"
+    override val templateName = "ARCHITECTURE"
+
+    override fun buildToolRegistry() = ToolRegistry {
         tool(::readFile)
         tool(::listFiles)
         tool(::codeSearchTool)
     }
 
-    override suspend fun process(request: String): String {
-        val template = templateResolver.resolve("ARCHITECTURE")
-        val agent = AIAgent(
-            promptExecutor = executor,
-            agentConfig = AIAgentConfig(
-                prompt = prompt("arch-doc", params = AnthropicParams(maxTokens = 8192)) {
-                    system(buildSystemPrompt(template))
-                },
-                model = AnthropicModels.Haiku_4_5,
-                maxAgentIterations = 30,
-            ),
-            toolRegistry = registry,
-            installFeatures = {
-                install(EventHandler) {
-                    onToolCallStarting {
-                        println("\u001B[34m[arch] 도구 호출중: ${it.toolName}\u001B[0m")
-                        it.toolName
-                    }
-                    onToolCallCompleted {
-                        println("\u001B[34m[arch] 도구 완료: ${it.toolName}\u001B[0m")
-                        it.toolName
-                    }
-                    onToolCallFailed {
-                        println("\u001B[31m[arch] 도구 실패: ${it.toolName}\u001B[0m")
-                        it.toolName
-                    }
-                }
-            }
-        )
-        return agent.run(request)
-    }
-
-    private fun buildSystemPrompt(template: String): String = """
+    override fun buildSystemPrompt(template: String) = """
 # 아키텍처 문서 생성 전문 에이전트
 
 ## 역할

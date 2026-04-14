@@ -7,6 +7,7 @@ import io.github.veronikapj.autodoc.tools.GitHubTool
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import org.slf4j.LoggerFactory
 
 class OrchestratorAgent(
     private val clientManager: A2AClientManager,
@@ -14,13 +15,14 @@ class OrchestratorAgent(
     private val githubTool: GitHubTool,
     private val repoName: String,
 ) {
+    private val log = LoggerFactory.getLogger(OrchestratorAgent::class.java)
+
     suspend fun run(prNumber: Int): Map<String, String> = coroutineScope {
         // 1. PR diff 분석
         val changedFiles = githubTool.fetchChangedFiles(repoName, prNumber)
         val prInfo = githubTool.fetchPRInfo(repoName, prNumber)
 
-        println("📋 PR #$prNumber: ${prInfo.title}")
-        println("📁 변경 파일 ${changedFiles.size}개 분석 중...")
+        log.info("PR #{}: {} ({} files changed)", prNumber, prInfo.title, changedFiles.size)
 
         // 2. 필요한 에이전트 선별
         val agentsToCall = platformConfig.resolveAgents(changedFiles).toMutableSet()
@@ -29,11 +31,11 @@ class OrchestratorAgent(
         }
 
         if (agentsToCall.isEmpty()) {
-            println("⏭️ 문서 업데이트가 필요한 변경사항 없음")
+            log.info("no documents to update, skipping")
             return@coroutineScope emptyMap()
         }
 
-        println("🎯 호출할 에이전트: ${agentsToCall.joinToString { it.name }}")
+        log.info("agents to call: {}", agentsToCall.joinToString { it.name })
 
         val request = buildRequest(prNumber, prInfo.title, changedFiles)
 
@@ -41,12 +43,12 @@ class OrchestratorAgent(
         val results = agentsToCall.map { agentType ->
             async {
                 try {
-                    println("🔄 ${agentType.name} 에이전트 호출 중...")
+                    log.info("calling {} agent...", agentType.name)
                     val result = clientManager.sendMessage(agentType, request)
-                    println("✅ ${agentType.name} 완료")
+                    log.info("{} agent completed", agentType.name)
                     agentType to result
                 } catch (e: Exception) {
-                    println("❌ ${agentType.name} 실패: ${e.message}")
+                    log.error("{} agent failed: {}", agentType.name, e.message)
                     agentType to null
                 }
             }

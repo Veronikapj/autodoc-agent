@@ -15,6 +15,9 @@ import io.github.veronikapj.autodoc.platform.PlatformConfig
 import io.github.veronikapj.autodoc.platform.TemplateResolver
 import io.github.veronikapj.autodoc.tools.GitHubTool
 import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("AutoDocAgent")
 
 fun main(args: Array<String>) = runBlocking {
     val prNumber = args.firstOrNull()?.toIntOrNull()
@@ -28,11 +31,9 @@ fun main(args: Array<String>) = runBlocking {
 
     // 설정 로드
     val config = ConfigLoader.load(repoPath)
-    println("AutoDoc Agent 시작")
-    println("   플랫폼: ${config.platform}")
-    println("   PR: #$prNumber")
-    println("   레포: $repoName")
-    println("   모델: ${config.model.provider} ${config.model.name ?: "(기본값)"}")
+    log.info("starting — platform={} pr=#{} repo={} model={} {}",
+        config.platform, prNumber, repoName,
+        config.model.provider, config.model.name ?: "(default)")
 
     // 공통 컴포넌트
     val executor = buildExecutor(config.model.provider, config.model.name)
@@ -52,7 +53,7 @@ fun main(args: Array<String>) = runBlocking {
     )
 
     // A2A 서버 시작
-    println("\nA2A 서버 시작 중...")
+    log.info("starting A2A servers...")
     val serverManager = A2AServerManager(specialists)
     val ports = serverManager.start()
 
@@ -66,18 +67,17 @@ fun main(args: Array<String>) = runBlocking {
         val changedDocs = orchestrator.run(prNumber)
 
         if (changedDocs.isEmpty()) {
-            println("\n업데이트할 문서 없음. 종료합니다.")
+            log.info("no documents to update, exiting")
             return@runBlocking
         }
 
-        println("\n업데이트된 문서 ${changedDocs.size}개:")
-        changedDocs.keys.forEach { println("   - $it") }
+        log.info("{} document(s) updated: {}", changedDocs.size, changedDocs.keys.joinToString())
 
         // 문서 PR 생성
         val summary = buildPRSummary(changedDocs.keys.toList(), prNumber)
         githubTool.createDocsPR(repoName, "main", prNumber, changedDocs, summary)
 
-        println("\n완료!")
+        log.info("done")
     } finally {
         serverManager.stop()
     }

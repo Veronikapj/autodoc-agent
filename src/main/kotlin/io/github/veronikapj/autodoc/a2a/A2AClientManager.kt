@@ -10,6 +10,7 @@ import ai.koog.a2a.transport.Request
 import ai.koog.a2a.transport.client.jsonrpc.http.HttpJSONRPCClientTransport
 import io.github.veronikapj.autodoc.platform.AgentType
 import io.ktor.client.*
+import org.slf4j.LoggerFactory
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import kotlinx.coroutines.async
@@ -24,6 +25,7 @@ data class DocAgentClientInfo(
 )
 
 class A2AClientManager {
+    private val log = LoggerFactory.getLogger(A2AClientManager::class.java)
     private val clients = mutableListOf<DocAgentClientInfo>()
 
     val allClients: List<DocAgentClientInfo>
@@ -52,7 +54,7 @@ class A2AClientManager {
                     agentCardResolver = agentCardResolver,
                 )
                 client.connect()
-                println("\u001B[32mA2A Doc Client 연결: $agentType (port $port)\u001B[0m")
+                log.info("A2A client connected: {} (port {})", agentType, port)
                 DocAgentClientInfo(agentType, client, httpClient)
             }
         }.awaitAll()

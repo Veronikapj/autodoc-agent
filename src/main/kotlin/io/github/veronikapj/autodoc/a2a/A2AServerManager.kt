@@ -14,6 +14,7 @@ import io.ktor.client.request.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.*
+import org.slf4j.LoggerFactory
 import java.net.ServerSocket
 
 data class RunningDocServer(
@@ -25,6 +26,7 @@ data class RunningDocServer(
 class A2AServerManager(
     private val agents: Map<AgentType, SpecialistDocAgent>,
 ) {
+    private val log = LoggerFactory.getLogger(A2AServerManager::class.java)
     private val runningServers = mutableListOf<RunningDocServer>()
     private val serverJobs = mutableListOf<Job>()
     private var serverScope: CoroutineScope? = null
@@ -73,9 +75,9 @@ class A2AServerManager(
         waitForServersReady(allocatedPorts.values.toList())
         isRunning = true
 
-        println("\u001B[32mA2A Doc 서버 시작 완료:\u001B[0m")
+        log.info("A2A servers started:")
         for (server in runningServers) {
-            println("  - ${server.agentType}: http://localhost:${server.port}/a2a")
+            log.info("  {} -> http://localhost:{}/a2a", server.agentType, server.port)
         }
 
         allocatedPorts
@@ -169,7 +171,7 @@ class A2AServerManager(
                     }
                 }
                 if (!ready) {
-                    println("\u001B[33m서버 포트 $port 응답 대기 시간 초과\u001B[0m")
+                    log.warn("server port {} health check timed out", port)
                 }
             }
         } finally {
@@ -179,14 +181,14 @@ class A2AServerManager(
 
     fun stop() {
         if (!isRunning) return
-        println("\u001B[33mA2A Doc 서버 종료 중...\u001B[0m")
+        log.info("stopping A2A servers...")
         serverJobs.forEach { it.cancel() }
         serverScope?.cancel()
         runningServers.clear()
         serverJobs.clear()
         serverScope = null
         isRunning = false
-        println("\u001B[32mA2A Doc 서버 종료 완료\u001B[0m")
+        log.info("A2A servers stopped")
     }
 
     private data class AgentCardMeta(
