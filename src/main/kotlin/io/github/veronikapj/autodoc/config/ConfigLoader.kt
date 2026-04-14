@@ -31,18 +31,27 @@ object ConfigLoader {
 
             when {
                 indent == 0 && trimmed.startsWith("platform:") -> {
-                    inDocuments = false; inSpec = false; inModel = false
+                    inDocuments = false
+                    inSpec = false
+                    inModel = false
                     platform = trimmed.substringAfter("platform:").trim()
-                        .uppercase().let { runCatching { Platform.valueOf(it) }.getOrDefault(Platform.GENERIC) }
+                        .uppercase()
+                        .let { runCatching { Platform.valueOf(it) }.getOrDefault(Platform.GENERIC) }
                 }
                 indent == 0 && trimmed.startsWith("documents:") -> {
-                    inDocuments = true; inSpec = false; inModel = false
+                    inDocuments = true
+                    inSpec = false
+                    inModel = false
                 }
                 indent == 0 && trimmed.startsWith("spec:") -> {
-                    inDocuments = false; inSpec = true; inModel = false
+                    inDocuments = false
+                    inSpec = true
+                    inModel = false
                 }
                 indent == 0 && trimmed.startsWith("model:") -> {
-                    inDocuments = false; inSpec = false; inModel = true
+                    inDocuments = false
+                    inSpec = false
+                    inModel = true
                 }
                 inDocuments && indent > 0 -> {
                     val key = trimmed.substringBefore(":").trim()
@@ -53,18 +62,22 @@ object ConfigLoader {
                 inSpec && indent > 0 -> {
                     when {
                         trimmed.startsWith("source:") -> specSource = trimmed.substringAfter(":").trim()
-                            .uppercase().let { runCatching { SpecSource.valueOf(it) }.getOrDefault(SpecSource.MARKDOWN) }
+                            .uppercase()
+                            .let { runCatching { SpecSource.valueOf(it) }.getOrDefault(SpecSource.MARKDOWN) }
                         trimmed.startsWith("path:") -> specPath = trimmed.substringAfter(":").trim()
                         trimmed.startsWith("base_url:") -> specBaseUrl = trimmed.substringAfter(":").trim()
                         trimmed.startsWith("space_key:") -> specSpaceKey = trimmed.substringAfter(":").trim()
-                        trimmed.startsWith("- ") -> trimmed.removePrefix("- ").trim().toLongOrNull()?.let { specPageIds.add(it) }
+                        trimmed.startsWith("- ") ->
+                            trimmed.removePrefix("- ").trim().toLongOrNull()?.let { specPageIds.add(it) }
                     }
                 }
                 inModel && indent > 0 -> {
                     when {
                         trimmed.startsWith("provider:") -> modelProvider = trimmed.substringAfter(":").trim()
-                            .uppercase().let { runCatching { ModelProvider.valueOf(it) }.getOrDefault(ModelProvider.ANTHROPIC) }
-                        trimmed.startsWith("name:") -> modelName = trimmed.substringAfter(":").trim().takeIf { it.isNotEmpty() }
+                            .uppercase()
+                            .let { runCatching { ModelProvider.valueOf(it) }.getOrDefault(ModelProvider.ANTHROPIC) }
+                        trimmed.startsWith("name:") ->
+                            modelName = trimmed.substringAfter(":").trim().takeIf { it.isNotEmpty() }
                     }
                 }
             }

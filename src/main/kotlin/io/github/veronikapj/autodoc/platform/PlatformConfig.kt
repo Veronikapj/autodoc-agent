@@ -18,7 +18,8 @@ class PlatformConfig(private val platform: Platform) {
 
     private val patterns: Map<Platform, List<Pair<Regex, List<AgentType>>>> = mapOf(
         Platform.ANDROID to listOf(
-            Regex(".*/build\\.gradle\\.kts$|^settings\\.gradle\\.kts$") to listOf(AgentType.ARCH_DOC, AgentType.SETUP_DOC),
+            Regex(".*/build\\.gradle\\.kts$|^settings\\.gradle\\.kts$") to
+                listOf(AgentType.ARCH_DOC, AgentType.SETUP_DOC),
             Regex(".*/di/.*\\.kt$|.*Module.*\\.kt$") to listOf(AgentType.ARCH_DOC),
             Regex(".*(Activity|Fragment)\\.kt$") to listOf(AgentType.ARCH_DOC, AgentType.README),
             Regex(".*(Api|Service|Endpoint)\\.kt$") to listOf(AgentType.API_DOC),
@@ -63,7 +64,6 @@ class PlatformConfig(private val platform: Platform) {
         return result
     }
 
-    fun needsChangelog(prTitle: String): Boolean {
-        return changelogSkipPrefixes.none { prTitle.startsWith(it) }
-    }
+    fun needsChangelog(prTitle: String): Boolean =
+        changelogSkipPrefixes.none { prTitle.startsWith(it) }
 }
