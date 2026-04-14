@@ -1,7 +1,7 @@
 # AutoDoc Agent 설정 파일
 # 이 파일을 타겟 레포의 .autodoc/config.yml에 복사해서 사용하세요
 
-platform: android  # android | ios | backend | frontend | generic
+platform: generic  # android | ios | backend | frontend | generic
 
 documents:
   README.md: overwrite
