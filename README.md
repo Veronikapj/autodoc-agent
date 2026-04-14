@@ -1,26 +1,28 @@
 # autodoc-agent
 
-> PR이 머지될 때 코드 변경을 감지하고 관련 문서를 자동으로 업데이트하는 AI 멀티에이전트 GitHub Action
+> An AI multi-agent GitHub Action that detects code changes when a PR is merged and automatically updates relevant documentation.
+
+**[한국어](README.ko.md)**
 
 ---
 
-## 왜 만들었나
+## Why We Built This
 
-PR은 머지됐는데 README는 3달 전 내용, 아키텍처 문서는 리팩터링 이전 구조, API 문서는 엔드포인트가 절반쯤 사라진 채로 남아 있다. 이 패턴은 모든 팀에서 반복된다.
+PR gets merged — README is 3 months out of date, architecture doc still reflects the pre-refactor structure, API doc has half the endpoints missing. This pattern repeats across every team.
 
-autodoc-agent는 그 갭을 AI 에이전트로 자동화한다. PR이 머지되면 코드 변경을 분석해서 영향받는 문서만 골라 초안을 작성하고, 리뷰용 PR을 새로 만들어 준다.
+autodoc-agent automates that gap with AI agents. When a PR is merged, it analyzes the code changes, selects only the affected documents, drafts updates, and opens a new PR for human review.
 
 ---
 
-## 아키텍처
+## Architecture
 
 ```
-PR 머지 이벤트 (GitHub Actions)
+PR Merge Event (GitHub Actions)
         ↓
   OrchestratorAgent
-  - PR diff 분석
-  - 영향받는 문서 판단
-        ↓ 병렬 A2A 호출
+  - Analyze PR diff
+  - Determine affected documents
+        ↓ Parallel A2A calls
   ┌─────────────────────────┐
   │  ReadmeAgent            │  README.md
   │  ArchDocAgent           │  architecture.md
@@ -31,26 +33,29 @@ PR 머지 이벤트 (GitHub Actions)
   │  SpecDocAgent           │  spec/*.md
   └─────────────────────────┘
         ↓
-  문서 업데이트 PR 자동 생성
-  → 사람이 검토 후 머지
+  Auto-create documentation PR
+  → Human reviews and merges
 ```
 
-**기술 스택**: Kotlin · [Koog 0.8.0](https://github.com/JetBrains/koog) · A2A Protocol · Ktor · GitHub Actions
+**Tech Stack**: Kotlin · [Koog 0.8.0](https://github.com/JetBrains/koog) · A2A Protocol · Ktor · GitHub Actions
 
 ---
 
-## 사용법
+## Usage
 
-### 1. 타겟 레포에 설정 파일 추가
+### 1. Add config file to your repo
 
 ```yaml
 # .autodoc/config.yml
 platform: android  # android | ios | backend | frontend | generic
 
+model:
+  provider: anthropic  # anthropic | google | openai
+
 documents:
   README.md: overwrite
   architecture.md: overwrite
-  CHANGELOG.md: append    # append 모드는 기존 내용 유지 + 변경분 추가
+  CHANGELOG.md: append    # append keeps existing content and adds change history
   spec/*.md: append
 
 spec:
@@ -58,7 +63,7 @@ spec:
   path: docs/spec/
 ```
 
-### 2. GitHub Actions 워크플로 추가
+### 2. Add GitHub Actions workflow
 
 ```yaml
 # .github/workflows/autodoc.yml
@@ -82,54 +87,56 @@ jobs:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-### 3. 시크릿 설정
+### 3. Configure secrets
 
-| 시크릿 | 필수 | 설명 |
-|--------|------|------|
-| `ANTHROPIC_API_KEY` | 필수 | Claude API 키 |
-| `CONFLUENCE_TOKEN` | 선택 | Confluence 기획서 연동 시 |
-
----
-
-## 문서 모드
-
-| 모드 | 동작 |
-|------|------|
-| `overwrite` | 문서 전체를 새로 작성 (README, 아키텍처 등 현재 상태 반영) |
-| `append` | 기존 내용 유지 + 변경 이력 섹션 추가 (CHANGELOG, 기획서 등) |
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `ANTHROPIC_API_KEY` | Required (Anthropic) | Claude API key |
+| `GOOGLE_API_KEY` | Required (Google) | Gemini API key |
+| `OPENAI_API_KEY` | Required (OpenAI) | OpenAI API key |
+| `CONFLUENCE_TOKEN` | Optional | Only needed for Confluence spec sync |
 
 ---
 
-## 지원 플랫폼
+## Document Modes
 
-각 플랫폼별로 최적화된 문서 템플릿과 파일 패턴 매핑이 내장돼 있다.
+| Mode | Behavior |
+|------|----------|
+| `overwrite` | Rewrites the entire document to reflect the current state (README, architecture, etc.) |
+| `append` | Keeps existing content and appends a new change history section (CHANGELOG, specs, etc.) |
 
-| 플랫폼 | 감지 패턴 예시 | 생성 문서 |
-|--------|--------------|----------|
+---
+
+## Supported Platforms
+
+Each platform has built-in document templates and file pattern mappings.
+
+| Platform | Detected Patterns | Generated Documents |
+|----------|-------------------|---------------------|
 | `android` | `*Activity.kt`, `build.gradle.kts`, `*Test.kt` | README, architecture, modules, testing |
 | `ios` | `*.swift`, `*.xcodeproj` | README, architecture, testing |
 | `backend` | `*Controller.kt`, `*Api.kt`, `*Repository.kt` | README, architecture, api, database |
 | `frontend` | `*.tsx`, `*.vue`, `*.stories.*` | README, components, storybook |
-| `generic` | 모든 플랫폼 공통 | README, CHANGELOG, setup, spec |
+| `generic` | All platforms | README, CHANGELOG, setup, spec |
 
 ---
 
-## 커스텀 템플릿
+## Custom Templates
 
-팀 규칙에 맞게 템플릿을 직접 정의할 수 있다. 레포에 파일을 두면 내장 템플릿보다 우선 적용된다.
+You can define your own templates to match team conventions. Files placed in the repo take priority over built-in templates.
 
 ```
 .autodoc/
 └── templates/
     └── android/
-        └── README.md.tmpl   ← 이 파일이 있으면 내장 템플릿 대신 사용
+        └── README.md.tmpl   ← overrides the built-in template
 ```
 
-템플릿 우선순위: **레포 커스텀** → **플랫폼 내장** → **generic 내장**
+Template priority: **Repo custom** → **Platform built-in** → **Generic built-in**
 
 ---
 
-## Confluence 연동 (기획서 자동 동기화)
+## Confluence Integration
 
 ```yaml
 # .autodoc/config.yml
@@ -142,11 +149,11 @@ spec:
     - 789012
 ```
 
-Confluence 페이지 내용을 가져와 PR diff와 비교 후 `spec/*.md`를 append 모드로 업데이트한다.
+Fetches Confluence page content, compares it against the PR diff, and updates `spec/*.md` in append mode.
 
 ---
 
-## 로컬 실행
+## Local Run
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -160,19 +167,19 @@ export TARGET_REPO_PATH=/path/to/target-repo
 
 ---
 
-## 프로젝트 구조
+## Project Structure
 
 ```
 src/main/kotlin/io/github/veronikapj/autodoc/
-├── Main.kt                          # 진입점, 전체 파이프라인
+├── Main.kt                          # Entry point, full pipeline
 ├── config/
-│   ├── AutoDocConfig.kt             # 설정 데이터 모델
-│   └── ConfigLoader.kt             # .autodoc/config.yml 파싱
+│   ├── AutoDocConfig.kt             # Config data model
+│   └── ConfigLoader.kt             # .autodoc/config.yml parser
 ├── platform/
-│   ├── PlatformConfig.kt           # 파일 패턴 → 에이전트 매핑
-│   └── TemplateResolver.kt         # 3단계 템플릿 우선순위 로드
+│   ├── PlatformConfig.kt           # File pattern → agent mapping
+│   └── TemplateResolver.kt         # 3-level template priority loader
 ├── agent/
-│   ├── OrchestratorAgent.kt        # PR diff 분석, 병렬 A2A 호출
+│   ├── OrchestratorAgent.kt        # PR diff analysis, parallel A2A calls
 │   └── specialist/
 │       ├── ReadmeAgent.kt
 │       ├── ArchDocAgent.kt
@@ -182,16 +189,16 @@ src/main/kotlin/io/github/veronikapj/autodoc/
 │       ├── SetupDocAgent.kt
 │       └── SpecDocAgent.kt
 ├── a2a/
-│   ├── DocAgentExecutor.kt         # A2A 서버 실행기
-│   ├── A2AServerManager.kt         # 동적 포트 할당, 헬스체크
-│   └── A2AClientManager.kt         # 병렬 연결 관리
+│   ├── DocAgentExecutor.kt         # A2A server executor
+│   ├── A2AServerManager.kt         # Dynamic port allocation, health check
+│   └── A2AClientManager.kt         # Parallel connection management
 └── tools/
-    ├── GitHubTool.kt               # PR 조회, 문서 PR 생성
-    └── ConfluenceTool.kt           # Confluence 페이지 조회
+    ├── GitHubTool.kt               # PR fetch, docs PR creation
+    └── ConfluenceTool.kt           # Confluence page fetcher
 ```
 
 ---
 
-## 라이선스
+## License
 
 MIT
