@@ -4,10 +4,19 @@ author: 'Veronikapj'
 
 inputs:
   anthropic-api-key:
-    description: 'Anthropic API Key for Claude'
-    required: true
+    description: 'Anthropic API Key (provider: anthropic 설정 시 필요)'
+    required: false
+    default: ''
+  google-api-key:
+    description: 'Google API Key (provider: google 설정 시 필요)'
+    required: false
+    default: ''
+  openai-api-key:
+    description: 'OpenAI API Key (provider: openai 설정 시 필요)'
+    required: false
+    default: ''
   confluence-token:
-    description: 'Confluence API Token (only needed if spec.source is confluence)'
+    description: 'Confluence API Token (spec.source: confluence 설정 시 필요)'
     required: false
     default: ''
 

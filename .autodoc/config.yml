@@ -3,6 +3,10 @@
 
 platform: generic  # android | ios | backend | frontend | generic
 
+model:
+  provider: anthropic  # anthropic | google | openai
+  # name: claude-sonnet-4-6  # 생략하면 provider 기본 모델 사용
+
 documents:
   README.md: overwrite
   architecture.md: overwrite

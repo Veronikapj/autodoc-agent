@@ -19,6 +19,8 @@ dependencies {
     implementation("ai.koog:a2a-transport-server-jsonrpc-http-jvm:0.8.0")
     implementation("ai.koog:a2a-transport-client-jsonrpc-http-jvm:0.8.0")
     implementation("ai.koog:prompt-executor-anthropic-client-jvm:0.8.0")
+    implementation("ai.koog:prompt-executor-google-client-jvm:0.8.0")
+    implementation("ai.koog:prompt-executor-openai-client-jvm:0.8.0")
     implementation("io.ktor:ktor-client-cio:3.1.2")
     implementation("io.ktor:ktor-server-netty:3.1.2")
     implementation("com.charleskorn.kaml:kaml:0.67.0")

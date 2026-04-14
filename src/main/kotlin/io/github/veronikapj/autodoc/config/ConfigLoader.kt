@@ -21,6 +21,9 @@ object ConfigLoader {
         var specSpaceKey: String? = null
         val specPageIds = mutableListOf<Long>()
         var inSpec = false
+        var modelProvider = ModelProvider.ANTHROPIC
+        var modelName: String? = null
+        var inModel = false
 
         for (line in lines) {
             val trimmed = line.trimStart()
@@ -28,18 +31,18 @@ object ConfigLoader {
 
             when {
                 indent == 0 && trimmed.startsWith("platform:") -> {
-                    inDocuments = false
-                    inSpec = false
+                    inDocuments = false; inSpec = false; inModel = false
                     platform = trimmed.substringAfter("platform:").trim()
                         .uppercase().let { runCatching { Platform.valueOf(it) }.getOrDefault(Platform.GENERIC) }
                 }
                 indent == 0 && trimmed.startsWith("documents:") -> {
-                    inDocuments = true
-                    inSpec = false
+                    inDocuments = true; inSpec = false; inModel = false
                 }
                 indent == 0 && trimmed.startsWith("spec:") -> {
-                    inDocuments = false
-                    inSpec = true
+                    inDocuments = false; inSpec = true; inModel = false
+                }
+                indent == 0 && trimmed.startsWith("model:") -> {
+                    inDocuments = false; inSpec = false; inModel = true
                 }
                 inDocuments && indent > 0 -> {
                     val key = trimmed.substringBefore(":").trim()
@@ -57,6 +60,13 @@ object ConfigLoader {
                         trimmed.startsWith("- ") -> trimmed.removePrefix("- ").trim().toLongOrNull()?.let { specPageIds.add(it) }
                     }
                 }
+                inModel && indent > 0 -> {
+                    when {
+                        trimmed.startsWith("provider:") -> modelProvider = trimmed.substringAfter(":").trim()
+                            .uppercase().let { runCatching { ModelProvider.valueOf(it) }.getOrDefault(ModelProvider.ANTHROPIC) }
+                        trimmed.startsWith("name:") -> modelName = trimmed.substringAfter(":").trim().takeIf { it.isNotEmpty() }
+                    }
+                }
             }
         }
 
@@ -69,6 +79,10 @@ object ConfigLoader {
                 baseUrl = specBaseUrl,
                 spaceKey = specSpaceKey,
                 pageIds = specPageIds,
+            ),
+            model = ModelConfig(
+                provider = modelProvider,
+                name = modelName,
             )
         )
     }

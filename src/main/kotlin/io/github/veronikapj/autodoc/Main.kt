@@ -1,12 +1,15 @@
 package io.github.veronikapj.autodoc
 
 import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient
+import ai.koog.prompt.executor.clients.google.GoogleLLMClient
+import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import io.github.veronikapj.autodoc.a2a.A2AClientManager
 import io.github.veronikapj.autodoc.a2a.A2AServerManager
 import io.github.veronikapj.autodoc.agent.OrchestratorAgent
 import io.github.veronikapj.autodoc.agent.specialist.*
 import io.github.veronikapj.autodoc.config.ConfigLoader
+import io.github.veronikapj.autodoc.config.ModelProvider
 import io.github.veronikapj.autodoc.platform.AgentType
 import io.github.veronikapj.autodoc.platform.PlatformConfig
 import io.github.veronikapj.autodoc.platform.TemplateResolver
@@ -17,8 +20,6 @@ fun main(args: Array<String>) = runBlocking {
     val prNumber = args.firstOrNull()?.toIntOrNull()
         ?: error("PR 번호를 인자로 전달해주세요. 예: ./gradlew run --args='42'")
 
-    val anthropicKey = System.getenv("ANTHROPIC_API_KEY")
-        ?: error("ANTHROPIC_API_KEY 환경변수가 없습니다")
     val githubToken = System.getenv("GITHUB_TOKEN")
         ?: error("GITHUB_TOKEN 환경변수가 없습니다")
     val repoName = System.getenv("GITHUB_REPOSITORY")
@@ -31,10 +32,10 @@ fun main(args: Array<String>) = runBlocking {
     println("   플랫폼: ${config.platform}")
     println("   PR: #$prNumber")
     println("   레포: $repoName")
+    println("   모델: ${config.model.provider} ${config.model.name ?: "(기본값)"}")
 
     // 공통 컴포넌트
-    val client = AnthropicLLMClient(anthropicKey)
-    val executor = MultiLLMPromptExecutor(client)
+    val executor = buildExecutor(config.model.provider, config.model.name)
     val templateResolver = TemplateResolver(config.platform, repoPath)
     val platformConfig = PlatformConfig(config.platform)
     val githubTool = GitHubTool(githubToken)
@@ -80,6 +81,27 @@ fun main(args: Array<String>) = runBlocking {
     } finally {
         serverManager.stop()
     }
+}
+
+private fun buildExecutor(provider: ModelProvider, modelName: String?): MultiLLMPromptExecutor {
+    val client = when (provider) {
+        ModelProvider.ANTHROPIC -> {
+            val key = System.getenv("ANTHROPIC_API_KEY")
+                ?: error("ANTHROPIC_API_KEY 환경변수가 없습니다")
+            AnthropicLLMClient(apiKey = key)
+        }
+        ModelProvider.GOOGLE -> {
+            val key = System.getenv("GOOGLE_API_KEY")
+                ?: error("GOOGLE_API_KEY 환경변수가 없습니다")
+            GoogleLLMClient(apiKey = key)
+        }
+        ModelProvider.OPENAI -> {
+            val key = System.getenv("OPENAI_API_KEY")
+                ?: error("OPENAI_API_KEY 환경변수가 없습니다")
+            OpenAILLMClient(apiKey = key)
+        }
+    }
+    return MultiLLMPromptExecutor(client)
 }
 
 private fun buildPRSummary(updatedDocs: List<String>, prNumber: Int) = """
