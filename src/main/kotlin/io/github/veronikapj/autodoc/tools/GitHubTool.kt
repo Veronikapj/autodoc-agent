@@ -1,6 +1,7 @@
 package io.github.veronikapj.autodoc.tools
 
 import org.kohsuke.github.GitHubBuilder
+import org.slf4j.LoggerFactory
 import java.util.Base64
 
 data class PRInfo(
@@ -15,6 +16,7 @@ fun extractPRType(title: String): String? =
     Regex("^(feat|fix|refactor|docs|chore|style|test):").find(title)?.groupValues?.get(1)
 
 class GitHubTool(private val token: String) {
+    private val log = LoggerFactory.getLogger(GitHubTool::class.java)
     private val github = GitHubBuilder().withOAuthToken(token).build()
 
     fun fetchChangedFiles(repoName: String, prNumber: Int): List<String> {
@@ -50,7 +52,7 @@ class GitHubTool(private val token: String) {
         try {
             repo.createRef("refs/heads/$branchName", baseRef.`object`.sha)
         } catch (e: Exception) {
-            println("브랜치 이미 존재: $branchName")
+            log.warn("branch already exists: {}", branchName)
         }
 
         // 각 문서 파일 커밋
@@ -83,9 +85,9 @@ class GitHubTool(private val token: String) {
                 baseBranch,
                 summary,
             )
-            println("✅ 문서 PR 생성 완료")
+            log.info("docs PR created successfully")
         } catch (e: Exception) {
-            println("⚠️ PR 생성 실패: ${e.message}")
+            log.error("failed to create docs PR: {}", e.message)
         }
     }
 }

@@ -1,9 +1,16 @@
 <configuration>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss} %-5level [%logger{20}] %msg%n</pattern>
         </encoder>
     </appender>
+
+    <!-- autodoc-agent: INFO (tool 호출 상세는 DEBUG로 분리) -->
+    <logger name="io.github.veronikapj.autodoc" level="INFO" additivity="false">
+        <appender-ref ref="STDOUT" />
+    </logger>
+
+    <!-- 서드파티 라이브러리: WARN 이상만 출력 -->
     <root level="WARN">
         <appender-ref ref="STDOUT" />
     </root>
