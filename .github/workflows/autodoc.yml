@@ -8,6 +8,9 @@ jobs:
   autodoc:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    permissions:
+      contents: write       # 브랜치 생성, 파일 커밋
+      pull-requests: write  # 문서 업데이트 PR 생성
     steps:
       - uses: actions/checkout@v4
         with:
