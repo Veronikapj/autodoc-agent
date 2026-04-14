@@ -7,7 +7,13 @@ import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import io.github.veronikapj.autodoc.a2a.A2AClientManager
 import io.github.veronikapj.autodoc.a2a.A2AServerManager
 import io.github.veronikapj.autodoc.agent.OrchestratorAgent
-import io.github.veronikapj.autodoc.agent.specialist.*
+import io.github.veronikapj.autodoc.agent.specialist.ApiDocAgent
+import io.github.veronikapj.autodoc.agent.specialist.ArchDocAgent
+import io.github.veronikapj.autodoc.agent.specialist.ChangelogAgent
+import io.github.veronikapj.autodoc.agent.specialist.ReadmeAgent
+import io.github.veronikapj.autodoc.agent.specialist.SetupDocAgent
+import io.github.veronikapj.autodoc.agent.specialist.SpecDocAgent
+import io.github.veronikapj.autodoc.agent.specialist.TestDocAgent
 import io.github.veronikapj.autodoc.config.ConfigLoader
 import io.github.veronikapj.autodoc.config.ModelProvider
 import io.github.veronikapj.autodoc.platform.AgentType

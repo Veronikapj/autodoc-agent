@@ -16,6 +16,18 @@ PR 머지 시 코드 변경을 분석해 영향받는 문서 초안을 작성하
 
 이 프로젝트에서 적용하는 규칙. [Kotlin 공식 컨벤션](https://kotlinlang.org/docs/coding-conventions.html) 기반.
 
+### 와일드카드 import 금지
+
+```kotlin
+// ❌
+import io.github.veronikapj.autodoc.agent.specialist.*
+
+// ✅
+import io.github.veronikapj.autodoc.agent.specialist.ReadmeAgent
+import io.github.veronikapj.autodoc.agent.specialist.ArchDocAgent
+import io.github.veronikapj.autodoc.agent.specialist.ApiDocAgent
+```
+
 ### 세미콜론 금지
 
 ```kotlin
