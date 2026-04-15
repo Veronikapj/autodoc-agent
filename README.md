@@ -1,7 +1,3 @@
-PR #6의 변경사항을 분석한 결과, 이는 `GitHubTool.kt`의 base64 인코딩 관련 버그 수정이지만, 현재 코드에서는 base64 관련 코드가 명확하게 보이지 않습니다. 
-
-기존 README.md를 검토해본 결과, 이 PR의 변경사항은 내부 구현 레벨의 버그 수정(base64 이중 인코딩)으로, README의 사용자 관점 내용에 영향을 주지 않습니다. README는 기존 상태 그대로 유지하는 것이 적절합니다.
-
 # autodoc-agent
 
 > An AI multi-agent GitHub Action that detects code changes when a PR is merged and automatically updates relevant documentation.
