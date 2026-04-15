@@ -14,6 +14,7 @@ class SetupDocAgent(
 
     override val tag = "setup"
     override val templateName = "SETUP"
+    override val searchScopeHint = "build.gradle.kts, settings.gradle.kts, Dockerfile, docker-compose.yml, .env.example"
 
     override fun buildToolRegistry() = ToolRegistry {
         tool(::readFile)

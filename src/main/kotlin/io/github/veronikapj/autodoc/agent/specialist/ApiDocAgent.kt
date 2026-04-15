@@ -14,6 +14,7 @@ class ApiDocAgent(
 
     override val tag = "api"
     override val templateName = "API"
+    override val searchScopeHint = "*Api.kt, *Controller.kt, *Service.kt, *Endpoint*.kt, *Repository.kt"
 
     override fun buildToolRegistry() = ToolRegistry {
         tool(::readFile)

@@ -14,6 +14,7 @@ class ReadmeAgent(
 
     override val tag = "readme"
     override val templateName = "README"
+    override val searchScopeHint = "Main.kt, *Application.kt, build.gradle.kts, settings.gradle.kts, README.md"
 
     override fun buildToolRegistry() = ToolRegistry {
         tool(::readFile)
@@ -37,7 +38,7 @@ PR 변경 사항을 분석하여 README를 최신 상태로 유지합니다.
 1. 기존 README.md가 있으면 반드시 전체를 읽고 시작합니다.
 2. 변경된 파일들을 분석하여 README에 영향을 주는 변경 사항을 파악합니다.
 3. 아래 행동 규칙에 따라 README를 작성 또는 업데이트합니다.
-4. 결과로 문서의 전체 내용만 출력합니다 (설명이나 코멘트 없이).
+4. 최종 출력은 반드시 문서 전체 내용만 포함합니다.
 
 ## 템플릿
 아래 템플릿을 참고하여 문서를 작성하세요:
@@ -48,8 +49,12 @@ $template
 1. 기존 README가 있으면 기존 톤과 스타일을 그대로 유지합니다.
 2. PR 변경 사항과 관련 없는 섹션은 절대 수정하지 않습니다.
 3. 확인할 수 없는 내용(버전, 환경 변수 등)은 TODO로 표시합니다.
-4. 결과로 문서 전체 내용만 출력합니다 (설명, 코멘트, 해설 없이).
-5. 마크다운 형식으로 작성합니다.
-6. 한국어로 작성합니다.
+4. 마크다운 형식으로 작성합니다.
+5. 한국어로 작성합니다.
+
+## 출력 형식 (엄수)
+- 분석 내용, 판단 과정, 설명, 코멘트를 절대 출력하지 않습니다.
+- 응답의 첫 글자부터 마지막 글자까지 오직 마크다운 문서 내용만 출력합니다.
+- README를 수정할 필요가 없다고 판단하더라도, 기존 README 전체를 그대로 출력합니다.
 """.trimIndent()
 }

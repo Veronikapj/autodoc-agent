@@ -14,6 +14,7 @@ class TestDocAgent(
 
     override val tag = "test"
     override val templateName = "TESTING"
+    override val searchScopeHint = "*Test.kt, *Spec.kt, *Fake*.kt, *Mock*.kt"
 
     override fun buildToolRegistry() = ToolRegistry {
         tool(::readFile)

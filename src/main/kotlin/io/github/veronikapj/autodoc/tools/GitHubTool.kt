@@ -2,6 +2,9 @@ package io.github.veronikapj.autodoc.tools
 
 import org.kohsuke.github.GitHubBuilder
 import org.slf4j.LoggerFactory
+import java.util.Base64
+
+data class CommitInfo(val sha: String, val message: String)
 
 data class PRInfo(
     val number: Int,
@@ -15,7 +18,9 @@ fun extractPRType(title: String): String? =
     Regex("^(feat|fix|refactor|docs|chore|style|test):").find(title)?.groupValues?.get(1)
 
 class GitHubTool(private val token: String) {
-    private val log = LoggerFactory.getLogger(GitHubTool::class.java)
+    companion object {
+        private val log = LoggerFactory.getLogger(GitHubTool::class.java)
+    }
     private val github = GitHubBuilder().withOAuthToken(token).build()
 
     fun fetchChangedFiles(repoName: String, prNumber: Int): List<String> {
@@ -36,6 +41,19 @@ class GitHubTool(private val token: String) {
         )
     }
 
+    fun fetchRecentCommits(repoName: String, maxCount: Int = 30): List<CommitInfo> {
+        val repo = github.getRepository(repoName)
+        return repo.listCommits().toList().take(maxCount).map {
+            CommitInfo(sha = it.shA1, message = it.commitShortInfo.message)
+        }
+    }
+
+    fun fetchFileContent(repoName: String, path: String): String? =
+        runCatching {
+            github.getRepository(repoName).getFileContent(path).content
+                ?.let { String(Base64.getDecoder().decode(it.replace("\n", ""))) }
+        }.getOrNull()
+
     fun createDocsPR(
         repoName: String,
         baseBranch: String,
@@ -44,7 +62,7 @@ class GitHubTool(private val token: String) {
         summary: String,
     ) {
         val repo = github.getRepository(repoName)
-        val branchName = "docs/auto-update-pr-$prNumber"
+        val branchName = if (prNumber == 0) "docs/auto-sync" else "docs/auto-update-pr-$prNumber"
 
         // 브랜치 생성
         val baseRef = repo.getRef("heads/$baseBranch")
