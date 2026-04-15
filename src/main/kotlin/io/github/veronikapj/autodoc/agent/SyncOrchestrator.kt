@@ -2,6 +2,7 @@ package io.github.veronikapj.autodoc.agent
 
 import io.github.veronikapj.autodoc.a2a.A2AClientManager
 import io.github.veronikapj.autodoc.agent.specialist.BaseDocAgent
+import io.github.veronikapj.autodoc.agent.specialist.BaseDocAgent.Companion.isRateLimitError
 import io.github.veronikapj.autodoc.platform.AgentType
 import io.github.veronikapj.autodoc.tools.GitHubTool
 import kotlinx.coroutines.coroutineScope
@@ -70,11 +71,6 @@ class SyncOrchestrator(
         private const val AGENT_DELAY_MS = 60_000L
 
         private val rateLimitDelaysMs = listOf(30_000L, 60_000L, 120_000L)
-
-        private fun isRateLimitError(e: Throwable): Boolean {
-            val msg = e.message ?: return false
-            return msg.contains("429") || msg.contains("rate_limit")
-        }
 
         suspend fun retryOnRateLimit(
             agentType: AgentType,

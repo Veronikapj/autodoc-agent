@@ -11,6 +11,7 @@ import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.clients.anthropic.AnthropicParams
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
+import ai.koog.prompt.llm.LLModel
 import io.github.veronikapj.autodoc.platform.TemplateResolver
 import org.slf4j.LoggerFactory
 
@@ -38,13 +39,28 @@ abstract class BaseDocAgent(
 
     override suspend fun process(request: String): String {
         val template = templateResolver.resolve(templateName)
-        val agent = AIAgent(
+        val fallbackModels = listOf(AnthropicModels.Haiku_4_5, AnthropicModels.Sonnet_4)
+        for ((index, model) in fallbackModels.withIndex()) {
+            val result = runCatching { buildAgent(template, model).run(request) }
+            val ex = result.exceptionOrNull()
+            if (ex == null) return result.getOrThrow()
+            if (isRateLimitError(ex) && index < fallbackModels.lastIndex) {
+                log.warn("[{}] rate limit on {}, retrying with {}", tag, model.id, fallbackModels[index + 1].id)
+                continue
+            }
+            throw ex
+        }
+        error("unreachable")
+    }
+
+    private fun buildAgent(template: String, model: LLModel): AIAgent<String, String> =
+        AIAgent(
             promptExecutor = executor,
             agentConfig = AIAgentConfig(
                 prompt = prompt(tag, params = AnthropicParams(maxTokens = 8192)) {
                     system(buildSystemPrompt(template))
                 },
-                model = AnthropicModels.Haiku_4_5,
+                model = model,
                 maxAgentIterations = 30,
             ),
             toolRegistry = buildToolRegistry(),
@@ -65,6 +81,11 @@ abstract class BaseDocAgent(
                 }
             }
         )
-        return agent.run(request)
+
+    companion object {
+        fun isRateLimitError(e: Throwable): Boolean {
+            val msg = e.message ?: return false
+            return msg.contains("429") || msg.contains("rate_limit")
+        }
     }
 }

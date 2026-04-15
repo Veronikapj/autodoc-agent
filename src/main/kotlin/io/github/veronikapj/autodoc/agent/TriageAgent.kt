@@ -10,6 +10,8 @@ import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.clients.anthropic.AnthropicParams
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
+import ai.koog.prompt.llm.LLModel
+import io.github.veronikapj.autodoc.agent.specialist.BaseDocAgent
 import io.github.veronikapj.autodoc.platform.AgentType
 import io.github.veronikapj.autodoc.tools.CommitInfo
 import org.slf4j.LoggerFactory
@@ -47,7 +49,26 @@ class TriageAgent(private val executor: MultiLLMPromptExecutor) {
             SPEC_DOC: SKIP
         """.trimIndent()
 
-        val agent = AIAgent(
+        val fallbackModels = listOf(AnthropicModels.Haiku_4_5, AnthropicModels.Sonnet_4)
+        for ((index, model) in fallbackModels.withIndex()) {
+            val result = runCatching { buildAgent(model).run(request) }
+            val ex = result.exceptionOrNull()
+            if (ex == null) {
+                val response = result.getOrThrow()
+                log.info("triage response: {}", response)
+                return parseResponse(response)
+            }
+            if (BaseDocAgent.isRateLimitError(ex) && index < fallbackModels.lastIndex) {
+                log.warn("triage rate limit on {}, retrying with {}", model.id, fallbackModels[index + 1].id)
+                continue
+            }
+            throw ex
+        }
+        error("unreachable")
+    }
+
+    private fun buildAgent(model: LLModel): AIAgent<String, String> =
+        AIAgent(
             promptExecutor = executor,
             agentConfig = AIAgentConfig(
                 prompt = prompt("triage", params = AnthropicParams(maxTokens = 512)) {
@@ -59,16 +80,11 @@ class TriageAgent(private val executor: MultiLLMPromptExecutor) {
                         """.trimIndent()
                     )
                 },
-                model = AnthropicModels.Haiku_4_5,
+                model = model,
                 maxAgentIterations = 5,
             ),
             toolRegistry = ToolRegistry { },
         )
-
-        val response = agent.run(request)
-        log.info("triage response: {}", response)
-        return parseResponse(response)
-    }
 
     companion object {
         private val log = LoggerFactory.getLogger(TriageAgent::class.java)
