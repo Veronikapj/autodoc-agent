@@ -14,3 +14,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - 문서 파일 이중 base64 인코딩 버그 수정
+- TriageAgent maxAgentIterations 값 수정
