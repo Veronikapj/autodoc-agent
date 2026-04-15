@@ -3,14 +3,23 @@ name: AutoDoc Sync
 on:
   workflow_dispatch:
     inputs:
-      confirm:
-        description: '전체 문서 동기화를 실행합니다. (yes 입력)'
+      doc_type:
+        description: '생성/업데이트할 문서 (all = 전체 동기화)'
         required: true
-        default: 'yes'
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - README
+          - ARCH_DOC
+          - API_DOC
+          - TEST_DOC
+          - CHANGELOG
+          - SETUP_DOC
+          - SPEC_DOC
 
 jobs:
   autodoc-sync:
-    if: github.event.inputs.confirm == 'yes'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,10 +34,15 @@ jobs:
       - name: Install ripgrep
         run: sudo apt-get install -y ripgrep
 
-      - name: Run AutoDoc Sync
+      - name: Run AutoDoc
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           TARGET_REPO_PATH: ${{ github.workspace }}
-        run: ./gradlew run --args="--sync"
+        run: |
+          if [ "${{ github.event.inputs.doc_type }}" = "all" ]; then
+            ./gradlew run --args="--sync"
+          else
+            ./gradlew run --args="--doc ${{ github.event.inputs.doc_type }}"
+          fi
