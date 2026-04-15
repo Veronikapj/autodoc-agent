@@ -22,7 +22,7 @@ class TriageAgent(private val executor: MultiLLMPromptExecutor) {
         commits: List<CommitInfo>,
         existingDocs: Map<AgentType, String?>,
     ): Map<AgentType, TriageResult> {
-        val commitSummary = commits.take(30).joinToString("\n") { "- ${it.message}" }
+        val commitSummary = commits.joinToString("\n") { "- ${it.message}" }
         val docSummary = existingDocs.entries.joinToString("\n") { (type, content) ->
             if (content == null) "${type.name}: 문서 없음"
             else "${type.name}: 존재 (${content.length}자)"

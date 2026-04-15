@@ -33,7 +33,7 @@ class SyncOrchestrator(
         }
 
         log.info("phase 2: running {} agent(s) sequentially: {}", needed.size, needed.joinToString { it.name })
-        val commitLog = commits.take(30).joinToString("\n") { "- ${it.message}" }
+        val commitLog = commits.joinToString("\n") { "- ${it.message}" }
 
         val results = mutableListOf<Pair<AgentType, String?>>()
         needed.forEachIndexed { index, agentType ->

@@ -41,7 +41,7 @@ class GitHubTool(private val token: String) {
         )
     }
 
-    fun fetchRecentCommits(repoName: String, maxCount: Int = 30): List<CommitInfo> {
+    fun fetchRecentCommits(repoName: String, maxCount: Int = 10): List<CommitInfo> {
         val repo = github.getRepository(repoName)
         return repo.listCommits().toList().take(maxCount).map {
             CommitInfo(sha = it.shA1, message = it.commitShortInfo.message)
