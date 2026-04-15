@@ -62,7 +62,7 @@ class GitHubTool(private val token: String) {
         summary: String,
     ) {
         val repo = github.getRepository(repoName)
-        val branchName = "docs/auto-update-pr-$prNumber"
+        val branchName = if (prNumber == 0) "docs/auto-sync" else "docs/auto-update-pr-$prNumber"
 
         // 브랜치 생성
         val baseRef = repo.getRef("heads/$baseBranch")
