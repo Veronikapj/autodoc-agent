@@ -94,6 +94,10 @@ fun main(args: Array<String>) = runBlocking {
                 existingContent = existingContent,
             )
             val content = clientManager.sendMessage(agentType, request)
+            if (content.isBlank()) {
+                log.error("doc generation failed for {}, skipping PR", agentType.name)
+                return@runBlocking
+            }
             val changedDocs = mapOf(agentType.toDocPath() to content)
 
             log.info("doc generated, creating PR...")

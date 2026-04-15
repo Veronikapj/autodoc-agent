@@ -39,7 +39,7 @@ abstract class BaseDocAgent(
 
     override suspend fun process(request: String): String {
         val template = templateResolver.resolve(templateName)
-        val fallbackModels = listOf(AnthropicModels.Haiku_4_5, AnthropicModels.Sonnet_4)
+        val fallbackModels = listOf(AnthropicModels.Haiku_4_5, AnthropicModels.Sonnet_4, AnthropicModels.Opus_4)
         for ((index, model) in fallbackModels.withIndex()) {
             val result = runCatching { buildAgent(template, model).run(request) }
             val ex = result.exceptionOrNull()
@@ -48,7 +48,8 @@ abstract class BaseDocAgent(
                 log.warn("[{}] rate limit on {}, retrying with {}", tag, model.id, fallbackModels[index + 1].id)
                 continue
             }
-            throw ex
+            log.error("[{}] all models exhausted or non-rate-limit error: {}", tag, ex.message)
+            return ""
         }
         error("unreachable")
     }

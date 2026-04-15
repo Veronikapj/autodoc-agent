@@ -1,6 +1,9 @@
 package io.github.veronikapj.autodoc.agent
 
+import io.github.veronikapj.autodoc.agent.specialist.BaseDocAgent
 import io.github.veronikapj.autodoc.platform.AgentType
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -42,5 +45,65 @@ class SyncOrchestratorTest {
             existingContent = "# 기존 README",
         )
         assertTrue("존재함" in request)
+    }
+
+    // --- retryOnRateLimit ---
+
+    @Test
+    fun `rate limit 없이 성공하면 결과를 그대로 반환한다`() = runTest {
+        val result = SyncOrchestrator.retryOnRateLimit(AgentType.README) {
+            AgentType.README to "content"
+        }
+        assertEquals(AgentType.README to "content", result)
+    }
+
+    @Test
+    fun `rate limit 예외 후 재시도에서 성공하면 결과를 반환한다`() = runTest {
+        var attempt = 0
+        val result = SyncOrchestrator.retryOnRateLimit(AgentType.README) {
+            attempt++
+            if (attempt == 1) throw RuntimeException("Status code: 429")
+            AgentType.README to "retried content"
+        }
+        assertEquals(AgentType.README to "retried content", result)
+        assertEquals(2, attempt)
+    }
+
+    @Test
+    fun `rate limit 아닌 예외는 즉시 null로 처리된다`() = runTest {
+        val result = SyncOrchestrator.retryOnRateLimit(AgentType.README) {
+            throw RuntimeException("connection refused")
+        }
+        assertEquals(AgentType.README to null, result)
+    }
+
+    @Test
+    fun `모든 재시도 소진 시 null을 반환한다`() = runTest {
+        val result = SyncOrchestrator.retryOnRateLimit(AgentType.README) {
+            throw RuntimeException("rate_limit_error")
+        }
+        assertEquals(AgentType.README to null, result)
+    }
+
+    // --- isRateLimitError ---
+
+    @Test
+    fun `429 포함 메시지는 rate limit 에러로 판단한다`() {
+        assertTrue(BaseDocAgent.isRateLimitError(RuntimeException("Status code: 429")))
+    }
+
+    @Test
+    fun `rate_limit 포함 메시지는 rate limit 에러로 판단한다`() {
+        assertTrue(BaseDocAgent.isRateLimitError(RuntimeException("rate_limit_error occurred")))
+    }
+
+    @Test
+    fun `일반 예외는 rate limit 에러가 아니다`() {
+        assertFalse(BaseDocAgent.isRateLimitError(RuntimeException("connection refused")))
+    }
+
+    @Test
+    fun `메시지 없는 예외는 rate limit 에러가 아니다`() {
+        assertFalse(BaseDocAgent.isRateLimitError(RuntimeException()))
     }
 }

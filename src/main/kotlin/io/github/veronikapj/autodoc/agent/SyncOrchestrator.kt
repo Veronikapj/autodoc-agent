@@ -62,7 +62,7 @@ class SyncOrchestrator(
         }
 
         results
-            .filter { (_, content) -> content != null }
+            .filter { (_, content) -> !content.isNullOrBlank() }
             .associate { (agentType, content) -> agentType.toDocPath() to content!! }
     }
 
