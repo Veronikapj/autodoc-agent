@@ -52,13 +52,10 @@ class SyncOrchestrator(
                 searchScopeHint = specialist.searchScopeHint,
                 existingContent = existingDocs[agentType],
             )
-            val result = runCatching {
+            val result = retryOnRateLimit(agentType) {
                 val content = clientManager.sendMessage(agentType, request)
                 log.info("{} agent completed ({}/{})", agentType.name, index + 1, needed.size)
                 agentType to content
-            }.getOrElse { e ->
-                log.error("{} agent failed: {}", agentType.name, e.message)
-                agentType to null
             }
             results.add(result)
         }
@@ -71,6 +68,38 @@ class SyncOrchestrator(
     companion object {
         private val log = LoggerFactory.getLogger(SyncOrchestrator::class.java)
         private const val AGENT_DELAY_MS = 60_000L
+
+        private val rateLimitDelaysMs = listOf(30_000L, 60_000L, 120_000L)
+
+        private fun isRateLimitError(e: Throwable): Boolean {
+            val msg = e.message ?: return false
+            return msg.contains("429") || msg.contains("rate_limit")
+        }
+
+        suspend fun retryOnRateLimit(
+            agentType: AgentType,
+            block: suspend () -> Pair<AgentType, String?>,
+        ): Pair<AgentType, String?> {
+            for ((attempt, delayMs) in rateLimitDelaysMs.withIndex()) {
+                val result = runCatching { block() }
+                val exception = result.exceptionOrNull()
+                if (exception == null) return result.getOrThrow()
+                if (!isRateLimitError(exception)) {
+                    log.error("{} agent failed: {}", agentType.name, exception.message)
+                    return agentType to null
+                }
+                log.warn(
+                    "{} agent hit rate limit (attempt {}/{}), waiting {}ms...",
+                    agentType.name, attempt + 1, rateLimitDelaysMs.size, delayMs,
+                )
+                delay(delayMs)
+            }
+            // final attempt after last delay
+            return runCatching { block() }.getOrElse { e ->
+                log.error("{} agent failed after all retries: {}", agentType.name, e.message)
+                agentType to null
+            }
+        }
 
         fun filterNeeded(triageResults: Map<AgentType, TriageResult>): List<AgentType> =
             triageResults.filter { (_, result) -> result == TriageResult.NEEDED }.keys.toList()
