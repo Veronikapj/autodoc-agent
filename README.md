@@ -1,6 +1,6 @@
-PR #6의 변경사항을 분석한 결과, 이는 `GitHubTool.kt`의 base64 인코딩 관련 버그 수정이지만, 현재 코드에서는 base64 관련 코드가 명확하게 보이지 않습니다. 
+PR #10은 `CHANGELOG.md` 파일의 변경사항을 반영하는 문서 작업입니다. 현재 `CHANGELOG.md`에는 PR #8에서 추가된 "sync 모드" 관련 내용이 이미 반영되어 있습니다. 이는 `CHANGELOG.md` 자체의 문서이며, README.md와 README.ko.md는 사용자 관점의 기능 설명 문서로서 CHANGELOG와는 별개입니다.
 
-기존 README.md를 검토해본 결과, 이 PR의 변경사항은 내부 구현 레벨의 버그 수정(base64 이중 인코딩)으로, README의 사용자 관점 내용에 영향을 주지 않습니다. README는 기존 상태 그대로 유지하는 것이 적절합니다.
+PR #10의 변경이 README를 업데이트할 필요는 없으므로, 기존 README.md를 그대로 유지하겠습니다.
 
 # autodoc-agent
 
