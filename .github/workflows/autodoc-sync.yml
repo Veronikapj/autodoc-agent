@@ -1,0 +1,31 @@
+name: AutoDoc Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '전체 문서 동기화를 실행합니다. (yes 입력)'
+        required: true
+        default: 'yes'
+
+jobs:
+  autodoc-sync:
+    if: github.event.inputs.confirm == 'yes'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Run AutoDoc Sync
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TARGET_REPO_PATH: ${{ github.workspace }}
+        run: ./gradlew run --args="--sync"
