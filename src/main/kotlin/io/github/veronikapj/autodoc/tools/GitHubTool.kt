@@ -2,7 +2,6 @@ package io.github.veronikapj.autodoc.tools
 
 import org.kohsuke.github.GitHubBuilder
 import org.slf4j.LoggerFactory
-import java.util.Base64
 
 data class PRInfo(
     val number: Int,
@@ -57,12 +56,11 @@ class GitHubTool(private val token: String) {
 
         // 각 문서 파일 커밋
         changedDocs.forEach { (path, content) ->
-            val encodedContent = Base64.getEncoder().encodeToString(content.toByteArray())
             try {
                 val existing = repo.getFileContent(path, branchName)
                 repo.createContent()
                     .path(path)
-                    .content(encodedContent)
+                    .content(content)
                     .message("docs: $path 업데이트 (PR #$prNumber)")
                     .sha(existing.sha)
                     .branch(branchName)
@@ -70,7 +68,7 @@ class GitHubTool(private val token: String) {
             } catch (e: Exception) {
                 repo.createContent()
                     .path(path)
-                    .content(encodedContent)
+                    .content(content)
                     .message("docs: $path 생성 (PR #$prNumber)")
                     .branch(branchName)
                     .commit()
