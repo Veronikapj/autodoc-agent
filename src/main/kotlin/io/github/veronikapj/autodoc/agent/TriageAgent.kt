@@ -60,7 +60,7 @@ class TriageAgent(private val executor: MultiLLMPromptExecutor) {
                     )
                 },
                 model = AnthropicModels.Haiku_4_5,
-                maxAgentIterations = 1,
+                maxAgentIterations = 5,
             ),
             toolRegistry = ToolRegistry { },
         )
