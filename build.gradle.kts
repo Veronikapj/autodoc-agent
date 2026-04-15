@@ -36,6 +36,7 @@ dependencies {
 
 application {
     mainClass.set("io.github.veronikapj.autodoc.MainKt")
+    applicationDefaultJvmArgs = listOf("-Xmx2g")
 }
 
 tasks.test {
