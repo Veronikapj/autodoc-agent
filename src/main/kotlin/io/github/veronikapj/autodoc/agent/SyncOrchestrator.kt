@@ -4,8 +4,6 @@ import io.github.veronikapj.autodoc.a2a.A2AClientManager
 import io.github.veronikapj.autodoc.agent.specialist.BaseDocAgent
 import io.github.veronikapj.autodoc.platform.AgentType
 import io.github.veronikapj.autodoc.tools.GitHubTool
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
@@ -34,34 +32,35 @@ class SyncOrchestrator(
             return@coroutineScope emptyMap()
         }
 
-        log.info("phase 2: running {} agent(s) in batches of {}: {}", needed.size, BATCH_SIZE, needed.joinToString { it.name })
+        log.info("phase 2: running {} agent(s) sequentially: {}", needed.size, needed.joinToString { it.name })
         val commitLog = commits.take(30).joinToString("\n") { "- ${it.message}" }
 
-        val results = needed.chunked(BATCH_SIZE).flatMapIndexed { batchIndex, batch ->
-            if (batchIndex > 0) {
-                log.info("waiting {}ms before next batch...", BATCH_DELAY_MS)
-                delay(BATCH_DELAY_MS)
+        val results = mutableListOf<Pair<AgentType, String?>>()
+        needed.forEachIndexed { index, agentType ->
+            if (index > 0) {
+                log.info("waiting {}ms before next agent...", AGENT_DELAY_MS)
+                delay(AGENT_DELAY_MS)
             }
-            log.info("batch {}: {}", batchIndex + 1, batch.joinToString { it.name })
-            batch.map { agentType ->
-                async {
-                    val specialist = specialists[agentType] ?: return@async agentType to null
-                    val request = buildSyncRequest(
-                        agentType = agentType,
-                        commitLog = commitLog,
-                        searchScopeHint = specialist.searchScopeHint,
-                        existingContent = existingDocs[agentType],
-                    )
-                    runCatching {
-                        val result = clientManager.sendMessage(agentType, request)
-                        log.info("{} agent completed", agentType.name)
-                        agentType to result
-                    }.getOrElse { e ->
-                        log.error("{} agent failed: {}", agentType.name, e.message)
-                        agentType to null
-                    }
-                }
-            }.awaitAll()
+            val specialist = specialists[agentType]
+            if (specialist == null) {
+                results.add(agentType to null)
+                return@forEachIndexed
+            }
+            val request = buildSyncRequest(
+                agentType = agentType,
+                commitLog = commitLog,
+                searchScopeHint = specialist.searchScopeHint,
+                existingContent = existingDocs[agentType],
+            )
+            val result = runCatching {
+                val content = clientManager.sendMessage(agentType, request)
+                log.info("{} agent completed ({}/{})", agentType.name, index + 1, needed.size)
+                agentType to content
+            }.getOrElse { e ->
+                log.error("{} agent failed: {}", agentType.name, e.message)
+                agentType to null
+            }
+            results.add(result)
         }
 
         results
@@ -71,8 +70,7 @@ class SyncOrchestrator(
 
     companion object {
         private val log = LoggerFactory.getLogger(SyncOrchestrator::class.java)
-        private const val BATCH_SIZE = 2
-        private const val BATCH_DELAY_MS = 30_000L
+        private const val AGENT_DELAY_MS = 60_000L
 
         fun filterNeeded(triageResults: Map<AgentType, TriageResult>): List<AgentType> =
             triageResults.filter { (_, result) -> result == TriageResult.NEEDED }.keys.toList()
