@@ -14,6 +14,7 @@ class ReadmeAgent(
 
     override val tag = "readme"
     override val templateName = "README"
+    override val searchScopeHint = "Main.kt, *Application.kt, build.gradle.kts, settings.gradle.kts, README.md"
 
     override fun buildToolRegistry() = ToolRegistry {
         tool(::readFile)

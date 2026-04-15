@@ -14,6 +14,7 @@ class SpecDocAgent(
 
     override val tag = "spec"
     override val templateName = "SPEC"
+    override val searchScopeHint = "docs/spec/, .autodoc/config.yml"
 
     override fun buildToolRegistry() = ToolRegistry {
         tool(::readFile)

@@ -24,6 +24,9 @@ abstract class BaseDocAgent(
     /** 에이전트 식별 태그. 로그와 prompt 이름에 사용됩니다. */
     abstract val tag: String
 
+    /** sync 모드에서 에이전트가 우선 탐색할 파일 패턴 힌트 */
+    abstract val searchScopeHint: String
+
     /** templateResolver.resolve() 에 넘길 템플릿 이름 */
     abstract val templateName: String
 

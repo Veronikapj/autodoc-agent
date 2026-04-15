@@ -14,6 +14,7 @@ class ChangelogAgent(
 
     override val tag = "changelog"
     override val templateName = "CHANGELOG"
+    override val searchScopeHint = "CHANGELOG.md, 커밋 로그만 참고 (코드 탐색 최소화)"
 
     override fun buildToolRegistry() = ToolRegistry {
         tool(::readFile)

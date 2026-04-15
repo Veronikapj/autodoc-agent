@@ -14,6 +14,7 @@ class ArchDocAgent(
 
     override val tag = "arch"
     override val templateName = "ARCHITECTURE"
+    override val searchScopeHint = "전체 디렉터리 구조, *Module*.kt, *di/*.kt, build.gradle.kts"
 
     override fun buildToolRegistry() = ToolRegistry {
         tool(::readFile)
