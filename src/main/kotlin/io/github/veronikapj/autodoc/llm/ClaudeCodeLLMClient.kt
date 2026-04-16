@@ -132,7 +132,7 @@ class ClaudeCodeLLMClient(
     object ClaudeCodeLLMProvider : LLMProvider(id = "claude-code", display = "Claude Code")
 
     companion object {
-        private const val DEFAULT_CLAUDE_PATH = "/opt/homebrew/bin/claude"
+        private const val DEFAULT_CLAUDE_PATH = "claude"
         private val log = LoggerFactory.getLogger(ClaudeCodeLLMClient::class.java)
     }
 }
