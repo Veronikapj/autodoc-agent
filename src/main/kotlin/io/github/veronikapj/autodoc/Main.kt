@@ -6,6 +6,7 @@ import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import io.github.veronikapj.autodoc.a2a.A2AClientManager
 import io.github.veronikapj.autodoc.a2a.A2AServerManager
+import io.github.veronikapj.autodoc.llm.ClaudeCodeLLMClient
 import io.github.veronikapj.autodoc.agent.OrchestratorAgent
 import io.github.veronikapj.autodoc.agent.SyncOrchestrator
 import io.github.veronikapj.autodoc.agent.TriageAgent
@@ -157,7 +158,11 @@ private fun buildExecutor(provider: ModelProvider, modelName: String?): MultiLLM
                 ?: error("OPENAI_API_KEY 환경변수가 없습니다")
             OpenAILLMClient(apiKey = key)
         }
-        ModelProvider.CLAUDE_CODE -> error("CLAUDE_CODE provider is not yet implemented")
+        ModelProvider.CLAUDE_CODE -> {
+            val client = ClaudeCodeLLMClient()
+            runBlocking { client.checkAuth() }
+            client
+        }
     }
     return MultiLLMPromptExecutor(client)
 }
