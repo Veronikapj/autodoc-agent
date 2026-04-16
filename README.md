@@ -91,10 +91,27 @@ jobs:
 
 | Secret | Required | Description |
 |--------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Required (Anthropic) | Claude API key |
+| `ANTHROPIC_API_KEY` | Required (Anthropic provider) | Claude API key |
 | `GOOGLE_API_KEY` | Required (Google) | Gemini API key |
 | `OPENAI_API_KEY` | Required (OpenAI) | OpenAI API key |
 | `CONFLUENCE_TOKEN` | Optional | Only needed for Confluence spec sync |
+
+### Local Run with Claude Code (no API key required)
+
+If you have [Claude Code](https://claude.ai/code) installed and authenticated locally, you can run autodoc-agent without any API key:
+
+```yaml
+# .autodoc/config.yml
+model:
+  provider: claude-code
+  name: claude-opus-4-6  # optional
+```
+
+**Prerequisites:**
+- `claude` CLI installed and available in PATH
+- `claude auth login` completed
+
+> **Note:** This provider works for local runs only. For GitHub Actions, use the `anthropic` / `google` / `openai` provider with the corresponding secret.
 
 ---
 
