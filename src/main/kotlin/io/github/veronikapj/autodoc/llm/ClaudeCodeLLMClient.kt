@@ -4,6 +4,7 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.prompt.dsl.ModerationResult
 import ai.koog.prompt.dsl.Prompt
 import ai.koog.prompt.executor.clients.LLMClient
+import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.message.Message
@@ -19,7 +20,9 @@ class ClaudeCodeLLMClient(
     private val claudePath: String = DEFAULT_CLAUDE_PATH,
 ) : LLMClient() {
 
-    override fun llmProvider(): LLMProvider = ClaudeCodeLLMProvider
+    // Return Anthropic's provider so MultiLLMPromptExecutor routes AnthropicModels requests to us.
+    // BaseDocAgent hardcodes AnthropicModels.Haiku_4_5 / Sonnet_4 / Opus_4 as fallback models.
+    override fun llmProvider(): LLMProvider = AnthropicModels.Haiku_4_5.provider
 
     override fun close() {
         // No persistent resources to release
@@ -95,7 +98,7 @@ class ClaudeCodeLLMClient(
     }
 
     private fun buildArgs(flatPrompt: String, modelId: String): List<String> {
-        val args = mutableListOf(claudePath, "-p", flatPrompt, "--no-markdown")
+        val args = mutableListOf(claudePath, "-p", flatPrompt, "--output-format", "text")
         if (modelId.isNotBlank()) {
             args += listOf("--model", modelId)
         }
@@ -124,12 +127,6 @@ class ClaudeCodeLLMClient(
 
         output.trim()
     }
-
-    // -------------------------------------------------------------------------
-    // LLMProvider singleton for claude-code
-    // -------------------------------------------------------------------------
-
-    object ClaudeCodeLLMProvider : LLMProvider(id = "claude-code", display = "Claude Code")
 
     companion object {
         private const val DEFAULT_CLAUDE_PATH = "claude"
