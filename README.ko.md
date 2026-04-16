@@ -91,10 +91,27 @@ jobs:
 
 | 시크릿 | 필수 | 설명 |
 |--------|------|------|
-| `ANTHROPIC_API_KEY` | 필수 (Anthropic) | Claude API 키 |
+| `ANTHROPIC_API_KEY` | 필수 (Anthropic provider) | Claude API 키 |
 | `GOOGLE_API_KEY` | 필수 (Google) | Gemini API 키 |
 | `OPENAI_API_KEY` | 필수 (OpenAI) | OpenAI API 키 |
 | `CONFLUENCE_TOKEN` | 선택 | Confluence 기획서 연동 시 |
+
+### Claude Code로 로컬 실행 (API 키 불필요)
+
+[Claude Code](https://claude.ai/code)가 로컬에 설치되고 인증된 상태라면 API 키 없이 autodoc-agent를 실행할 수 있다:
+
+```yaml
+# .autodoc/config.yml
+model:
+  provider: claude-code
+  name: claude-opus-4-6  # 선택 사항
+```
+
+**사전 조건:**
+- `claude` CLI가 설치되어 PATH에 있을 것
+- `claude auth login` 완료
+
+> **참고:** 이 provider는 로컬 실행 전용이다. GitHub Actions에서는 `anthropic` / `google` / `openai` provider와 해당 시크릿을 사용한다.
 
 ---
 

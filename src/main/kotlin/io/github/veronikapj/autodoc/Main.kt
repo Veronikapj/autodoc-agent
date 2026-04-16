@@ -6,6 +6,7 @@ import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import io.github.veronikapj.autodoc.a2a.A2AClientManager
 import io.github.veronikapj.autodoc.a2a.A2AServerManager
+import io.github.veronikapj.autodoc.llm.ClaudeCodeLLMClient
 import io.github.veronikapj.autodoc.agent.OrchestratorAgent
 import io.github.veronikapj.autodoc.agent.SyncOrchestrator
 import io.github.veronikapj.autodoc.agent.TriageAgent
@@ -140,7 +141,7 @@ fun main(args: Array<String>) = runBlocking {
     }
 }
 
-private fun buildExecutor(provider: ModelProvider, modelName: String?): MultiLLMPromptExecutor {
+private suspend fun buildExecutor(provider: ModelProvider, modelName: String?): MultiLLMPromptExecutor {
     val client = when (provider) {
         ModelProvider.ANTHROPIC -> {
             val key = System.getenv("ANTHROPIC_API_KEY")
@@ -156,6 +157,11 @@ private fun buildExecutor(provider: ModelProvider, modelName: String?): MultiLLM
             val key = System.getenv("OPENAI_API_KEY")
                 ?: error("OPENAI_API_KEY 환경변수가 없습니다")
             OpenAILLMClient(apiKey = key)
+        }
+        ModelProvider.CLAUDE_CODE -> {
+            val client = ClaudeCodeLLMClient()
+            client.checkAuth()
+            client
         }
     }
     return MultiLLMPromptExecutor(client)
