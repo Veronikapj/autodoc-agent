@@ -10,7 +10,10 @@ object ConfigLoader {
     }
 
     fun parseYaml(yaml: String): AutoDocConfig {
-        val lines = yaml.lines().filter { it.isNotBlank() && !it.trimStart().startsWith("#") }
+        val lines = yaml.lines()
+            .filter { it.isNotBlank() && !it.trimStart().startsWith("#") }
+            .map { if (it.contains("#")) it.substringBefore("#") else it }
+            .filter { it.isNotBlank() }
 
         var platform = Platform.GENERIC
         val documents = mutableMapOf<String, DocumentMode>()
