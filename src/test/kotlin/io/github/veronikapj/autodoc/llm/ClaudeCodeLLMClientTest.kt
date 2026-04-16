@@ -1,8 +1,10 @@
 package io.github.veronikapj.autodoc.llm
 
+import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ClaudeCodeLLMClientTest {
@@ -38,6 +40,21 @@ class ClaudeCodeLLMClientTest {
     fun `buildArgs omits model flag when model id is blank`() {
         val client = ClaudeCodeLLMClient()
         val args = client.buildArgsForTest("hello", "")
-        assertTrue(!args.contains("--model"))
+        assertFalse(args.contains("--model"))
+    }
+
+    @Test
+    fun `throws TimeoutException when process exceeds timeout`() {
+        val client = ClaudeCodeLLMClient(timeoutSeconds = 1)
+        assertThrows<TimeoutException> {
+            runBlocking { client.runProcessForTest(listOf("sleep", "10")) }
+        }
+    }
+
+    @Test
+    fun `completes successfully within timeout`() {
+        val client = ClaudeCodeLLMClient(timeoutSeconds = 5)
+        val result = runBlocking { client.runProcessForTest(listOf("echo", "hello")) }
+        assertTrue(result.contains("hello"))
     }
 }

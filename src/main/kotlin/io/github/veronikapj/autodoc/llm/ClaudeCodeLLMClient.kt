@@ -9,6 +9,8 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -18,6 +20,7 @@ import org.slf4j.LoggerFactory
 
 class ClaudeCodeLLMClient(
     private val claudePath: String = DEFAULT_CLAUDE_PATH,
+    private val timeoutSeconds: Long = TIMEOUT_SECONDS,
 ) : LLMClient() {
 
     // Return Anthropic's provider so MultiLLMPromptExecutor routes AnthropicModels requests to us.
@@ -36,6 +39,13 @@ class ClaudeCodeLLMClient(
         model: LLModel,
         tools: List<ToolDescriptor>,
     ): List<Message.Response> {
+        if (tools.isNotEmpty()) {
+            log.warn(
+                "ClaudeCodeLLMClient does not support tool calls — {} tool(s) will be ignored. " +
+                    "Code exploration (readFile, listFiles, codeSearchTool) will not work with this provider.",
+                tools.size,
+            )
+        }
         val flatPrompt = flattenPrompt(prompt)
         val args = buildArgs(flatPrompt, model.id)
         log.debug("Executing claude CLI: {}", args.joinToString(" "))
@@ -80,6 +90,8 @@ class ClaudeCodeLLMClient(
     internal fun buildArgsForTest(flatPrompt: String, modelId: String): List<String> =
         buildArgs(flatPrompt, modelId)
 
+    internal suspend fun runProcessForTest(args: List<String>): String = runProcess(args)
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
@@ -116,8 +128,14 @@ class ClaudeCodeLLMClient(
             )
         }
 
+        val completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
+        if (!completed) {
+            process.destroyForcibly()
+            throw TimeoutException("claude CLI timed out after ${timeoutSeconds}s")
+        }
+
         val output = process.inputStream.bufferedReader().readText()
-        val exitCode = process.waitFor()
+        val exitCode = process.exitValue()
 
         if (exitCode != 0) {
             throw IllegalStateException(
@@ -130,6 +148,7 @@ class ClaudeCodeLLMClient(
 
     companion object {
         private const val DEFAULT_CLAUDE_PATH = "claude"
+        private const val TIMEOUT_SECONDS = 120L
         private val log = LoggerFactory.getLogger(ClaudeCodeLLMClient::class.java)
     }
 }

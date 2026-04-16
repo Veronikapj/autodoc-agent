@@ -141,7 +141,7 @@ fun main(args: Array<String>) = runBlocking {
     }
 }
 
-private fun buildExecutor(provider: ModelProvider, modelName: String?): MultiLLMPromptExecutor {
+private suspend fun buildExecutor(provider: ModelProvider, modelName: String?): MultiLLMPromptExecutor {
     val client = when (provider) {
         ModelProvider.ANTHROPIC -> {
             val key = System.getenv("ANTHROPIC_API_KEY")
@@ -160,7 +160,7 @@ private fun buildExecutor(provider: ModelProvider, modelName: String?): MultiLLM
         }
         ModelProvider.CLAUDE_CODE -> {
             val client = ClaudeCodeLLMClient()
-            runBlocking { client.checkAuth() }
+            client.checkAuth()
             client
         }
     }
