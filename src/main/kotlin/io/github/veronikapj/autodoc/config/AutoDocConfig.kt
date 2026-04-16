@@ -3,7 +3,7 @@ package io.github.veronikapj.autodoc.config
 enum class Platform { ANDROID, IOS, BACKEND, FRONTEND, GENERIC }
 enum class DocumentMode { OVERWRITE, APPEND }
 enum class SpecSource { MARKDOWN, CONFLUENCE }
-enum class ModelProvider { ANTHROPIC, GOOGLE, OPENAI }
+enum class ModelProvider { ANTHROPIC, GOOGLE, OPENAI, CLAUDE_CODE }
 
 data class AutoDocConfig(
     val platform: Platform = Platform.GENERIC,

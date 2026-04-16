@@ -157,6 +157,7 @@ private fun buildExecutor(provider: ModelProvider, modelName: String?): MultiLLM
                 ?: error("OPENAI_API_KEY 환경변수가 없습니다")
             OpenAILLMClient(apiKey = key)
         }
+        ModelProvider.CLAUDE_CODE -> error("CLAUDE_CODE provider is not yet implemented")
     }
     return MultiLLMPromptExecutor(client)
 }

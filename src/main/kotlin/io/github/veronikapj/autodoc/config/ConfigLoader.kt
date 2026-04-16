@@ -74,8 +74,13 @@ object ConfigLoader {
                 inModel && indent > 0 -> {
                     when {
                         trimmed.startsWith("provider:") -> modelProvider = trimmed.substringAfter(":").trim()
-                            .uppercase()
-                            .let { runCatching { ModelProvider.valueOf(it) }.getOrDefault(ModelProvider.ANTHROPIC) }
+                            .let { raw ->
+                                when (raw.lowercase()) {
+                                    "claude-code" -> ModelProvider.CLAUDE_CODE
+                                    else -> runCatching { ModelProvider.valueOf(raw.uppercase()) }
+                                        .getOrDefault(ModelProvider.ANTHROPIC)
+                                }
+                            }
                         trimmed.startsWith("name:") ->
                             modelName = trimmed.substringAfter(":").trim().takeIf { it.isNotEmpty() }
                     }
